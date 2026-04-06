@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7f5eff" />
+      <stop offset="50%" stop-color="#39c4ff" />
+      <stop offset="100%" stop-color="#59ff92" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#05060a" />
+  <path
+    d="M30 82l18-32 16 22 20-38 14 24"
+    fill="none"
+    stroke="url(#g)"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <text x="50%" y="82" text-anchor="middle" font-size="40" fill="#ffffff" font-family="'Space Grotesk', sans-serif">W</text>
+</svg>

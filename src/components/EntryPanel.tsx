@@ -1,0 +1,197 @@
+import { useMemo, useState } from 'react';
+import { format } from 'date-fns';
+
+export type EntryPayload = {
+  weight: number;
+  timestamp: string;
+  workout?: {
+    activityType: 'cardio' | 'intervals' | 'strength';
+    durationMin: number;
+    peakHeartRate: number;
+  };
+};
+
+type EntryPanelProps = {
+  onAddEntry: (payload: EntryPayload) => void;
+};
+
+const roundToTenth = (value: number) => Math.round(value * 10) / 10;
+type WorkoutPayload = NonNullable<EntryPayload['workout']>;
+type ActivityType = WorkoutPayload['activityType'];
+
+export const EntryPanel = ({ onAddEntry }: EntryPanelProps) => {
+  const [todayWeight, setTodayWeight] = useState('');
+  const [todayActivity, setTodayActivity] = useState<ActivityType>('cardio');
+  const [todayDuration, setTodayDuration] = useState('45');
+  const [todayHeartRate, setTodayHeartRate] = useState('160');
+  const [pastWeight, setPastWeight] = useState('');
+  const [pastDate, setPastDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [pastTime, setPastTime] = useState('08:00');
+  const [pastActivity, setPastActivity] = useState<ActivityType>('cardio');
+  const [pastDuration, setPastDuration] = useState('45');
+  const [pastHeartRate, setPastHeartRate] = useState('160');
+
+  const workoutComplete = (duration: string, heartRate: string) =>
+    Boolean(duration.trim()) && Boolean(heartRate.trim());
+
+  const isTodayDisabled = useMemo(
+    () => !todayWeight.trim() || !workoutComplete(todayDuration, todayHeartRate),
+    [todayHeartRate, todayDuration, todayWeight],
+  );
+  const isPastDisabled = useMemo(
+    () =>
+      !pastWeight.trim() || !pastDate || !pastTime || !workoutComplete(pastDuration, pastHeartRate),
+    [pastDate, pastDuration, pastHeartRate, pastTime, pastWeight],
+  );
+
+  const buildWorkout = (activity: ActivityType, duration: string, heartRate: string) => {
+    const parsedDuration = parseFloat(duration);
+    const parsedHeartRate = parseFloat(heartRate);
+    if (Number.isNaN(parsedDuration) || Number.isNaN(parsedHeartRate)) return undefined;
+    return {
+      activityType: activity,
+      durationMin: Math.max(parsedDuration, 0),
+      peakHeartRate: Math.max(parsedHeartRate, 0),
+    };
+  };
+
+  const handleTodaySubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!todayWeight.trim()) return;
+    const weight = roundToTenth(parseFloat(todayWeight));
+    if (Number.isNaN(weight)) return;
+    const timestamp = new Date().toISOString();
+    const workout = buildWorkout(todayActivity, todayDuration, todayHeartRate);
+    onAddEntry({ weight, timestamp, workout });
+    setTodayWeight('');
+  };
+
+  const handlePastSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!pastWeight.trim() || !pastDate || !pastTime) return;
+    const weight = roundToTenth(parseFloat(pastWeight));
+    if (Number.isNaN(weight)) return;
+    const localTimestamp = new Date(`${pastDate}T${pastTime}`);
+    const workout = buildWorkout(pastActivity, pastDuration, pastHeartRate);
+    onAddEntry({ weight, timestamp: localTimestamp.toISOString(), workout });
+    setPastWeight('');
+  };
+
+  return (
+    <div className="entry-panel">
+      <section className="panel-card">
+        <div className="panel-head">
+          <p className="eyebrow">Today's checkpoint</p>
+          <h3>Capture your current self</h3>
+          <p className="muted">
+            Logging your cardio session (duration + heart rate) lets the metabolic model stay realistic.
+          </p>
+        </div>
+        <form className="entry-form" onSubmit={handleTodaySubmit}>
+          <label>
+            Today's weight (kg)
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              placeholder="81.4"
+              value={todayWeight}
+              onChange={(event) => setTodayWeight(event.target.value)}
+            />
+          </label>
+          <label>
+            Activity type
+            <select value={todayActivity} onChange={(event) => setTodayActivity(event.target.value as ActivityType)}>
+              <option value="cardio">Steady cardio</option>
+              <option value="intervals">Intervals/HIIT</option>
+              <option value="strength">Strength or circuit</option>
+            </select>
+          </label>
+          <label>
+            Session duration (min)
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={todayDuration}
+              onChange={(event) => setTodayDuration(event.target.value)}
+            />
+          </label>
+          <label>
+            Peak heart rate (bpm)
+            <input
+              type="number"
+              min="40"
+              step="1"
+              value={todayHeartRate}
+              onChange={(event) => setTodayHeartRate(event.target.value)}
+            />
+          </label>
+          <button type="submit" disabled={isTodayDisabled}>
+            Drop it into the model
+          </button>
+        </form>
+      </section>
+
+      <section className="panel-card">
+        <div className="panel-head">
+          <p className="eyebrow">Backfill a moment</p>
+          <h3>Tell WTrack about a past day</h3>
+          <p className="muted">Reconstructing cardio inputs keeps projections grounded in actual metabolism.</p>
+        </div>
+        <form className="entry-form" onSubmit={handlePastSubmit}>
+          <label>
+            Date
+            <input type="date" value={pastDate} onChange={(event) => setPastDate(event.target.value)} />
+          </label>
+          <label>
+            Time
+            <input type="time" value={pastTime} onChange={(event) => setPastTime(event.target.value)} />
+          </label>
+          <label>
+            Weight (kg)
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              placeholder="82.3"
+              value={pastWeight}
+              onChange={(event) => setPastWeight(event.target.value)}
+            />
+          </label>
+          <label>
+            Activity type
+            <select value={pastActivity} onChange={(event) => setPastActivity(event.target.value as ActivityType)}>
+              <option value="cardio">Steady cardio</option>
+              <option value="intervals">Intervals/HIIT</option>
+              <option value="strength">Strength or circuit</option>
+            </select>
+          </label>
+          <label>
+            Session duration (min)
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={pastDuration}
+              onChange={(event) => setPastDuration(event.target.value)}
+            />
+          </label>
+          <label>
+            Peak heart rate (bpm)
+            <input
+              type="number"
+              min="40"
+              step="1"
+              value={pastHeartRate}
+              onChange={(event) => setPastHeartRate(event.target.value)}
+            />
+          </label>
+          <button type="submit" disabled={isPastDisabled}>
+            Sync history
+          </button>
+        </form>
+      </section>
+    </div>
+  );
+};
