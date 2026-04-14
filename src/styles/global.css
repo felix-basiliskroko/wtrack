@@ -41,60 +41,9 @@ a {
 }
 
 .app-shell {
-  width: min(1200px, 100%);
+  width: min(1320px, 100%);
   margin: 0 auto;
-  padding: 40px 20px 80px;
-}
-
-.hero {
-  position: relative;
-  padding: 70px 20px 90px;
-  overflow: hidden;
-  border-radius: 28px;
-  background: linear-gradient(135deg, rgba(22, 30, 69, 0.9), rgba(7, 9, 22, 0.95));
-  border: 1px solid var(--border);
-  margin-bottom: 32px;
-}
-
-.hero::after {
-  content: '';
-  position: absolute;
-  inset: 20px;
-  border-radius: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  pointer-events: none;
-}
-
-.hero-orb {
-  position: absolute;
-  width: 420px;
-  height: 420px;
-  top: -120px;
-  right: -160px;
-  background: radial-gradient(circle, rgba(127, 94, 255, 0.7), rgba(56, 226, 255, 0.1));
-  filter: blur(20px);
-}
-
-.hero-copy {
-  position: relative;
-  max-width: 600px;
-}
-
-.hero h1 {
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
-  letter-spacing: -1px;
-}
-
-.hero h1 span {
-  display: block;
-  font-weight: 700;
-}
-
-.hero h1 small {
-  display: block;
-  font-size: 1.1rem;
-  color: rgba(255, 255, 255, 0.72);
-  margin-top: 12px;
+  padding: 24px 20px 96px;
 }
 
 .eyebrow {
@@ -108,20 +57,167 @@ a {
 main {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 24px 28px;
+  border-radius: 28px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(13, 19, 44, 0.92), rgba(6, 8, 20, 0.96));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  margin-bottom: 24px;
+}
+
+.brand-block h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: -0.04em;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.status-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.status-tile {
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  gap: 6px;
+}
+
+.status-tile strong {
+  font-size: 1rem;
+}
+
+.primary-button,
+.ghost-button,
+.nav-button,
+.bottom-nav-button {
+  cursor: pointer;
+  font: inherit;
+}
+
+.primary-button,
+.entry-form button,
+.goal-card button,
+.data-vault button {
+  padding: 14px 22px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #05060a;
+  font-weight: 600;
+}
+
+.ghost-button {
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+.app-frame {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 24px;
+}
+
+.nav-stack {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: rgba(9, 12, 28, 0.82);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.28);
+}
+
+.nav-button {
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.nav-button:hover {
+  color: #fff;
+  transform: translateX(2px);
+}
+
+.nav-button.active,
+.bottom-nav-button.active {
+  background: linear-gradient(135deg, rgba(127, 94, 255, 0.22), rgba(56, 226, 255, 0.18));
+  border-color: rgba(127, 94, 255, 0.4);
+  color: #fff;
+}
+
+.app-main {
+  min-width: 0;
+}
+
+.view-stack {
+  display: grid;
+  gap: 20px;
+}
+
+.view-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.view-intro h2 {
+  font-size: clamp(1.5rem, 3vw, 2.15rem);
 }
 
 .chart-panel {
   background: var(--surface-strong);
-  padding: 32px;
+  padding: 28px;
   border-radius: 28px;
   border: 1px solid var(--border);
   box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
 }
 
+.compact-panel {
+  padding: 20px;
+}
+
 .chart-frame {
   height: 420px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+}
+
+.compact-chart-frame {
+  height: 300px;
+  margin-bottom: 0;
 }
 
 .chart-shell {
@@ -131,7 +227,7 @@ main {
 .panel-card {
   background: var(--surface);
   border-radius: 24px;
-  padding: 24px;
+  padding: 22px;
   border: 1px solid var(--border);
   box-shadow: 0 20px 55px rgba(0, 0, 0, 0.35);
 }
@@ -211,18 +307,6 @@ main {
   padding: 10px 14px;
   color: #fff;
   font-size: 1rem;
-}
-
-.entry-form button,
-.goal-card button,
-.data-vault button {
-  padding: 14px 22px;
-  border-radius: 16px;
-  border: none;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #05060a;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .entry-form button:disabled {
@@ -395,6 +479,20 @@ main {
   color: #a3ffd1;
 }
 
+.bottom-nav {
+  display: none;
+}
+
+.bottom-nav-button {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 8px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 @media (max-width: 600px) {
   .chart-panel {
     padding: 24px 18px;
@@ -403,5 +501,50 @@ main {
   .goal-control {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+@media (max-width: 980px) {
+  .app-shell {
+    padding-bottom: 120px;
+  }
+
+  .topbar {
+    padding: 22px 20px;
+  }
+
+  .topbar-actions,
+  .view-intro {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .status-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .app-frame {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(6, 8, 20, 0.92);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
+    z-index: 20;
   }
 }
