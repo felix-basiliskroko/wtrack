@@ -1,20 +1,15 @@
-import { format } from 'date-fns';
-import { PredictionPoint, ProjectionSummary, WeightEntry } from '../types';
+import { DisplayPreferences, PredictionPoint, ProjectionSummary, WeightEntry } from '../types';
+import { convertWeight, formatDateTime, formatShortDate, formatWeight, formatWeightDelta } from '../utils/formatting';
 
 type SummaryPanelProps = {
   entries: WeightEntry[];
   predictions: PredictionPoint[];
   goalWeight: number;
+  preferences: DisplayPreferences;
   summary: ProjectionSummary | null;
 };
 
-const formatChange = (value: number) => {
-  if (!Number.isFinite(value)) return '0.0 kg';
-  const prefix = value > 0 ? '+' : '';
-  return `${prefix}${value.toFixed(1)} kg`;
-};
-
-export const SummaryPanel = ({ entries, predictions, goalWeight, summary }: SummaryPanelProps) => {
+export const SummaryPanel = ({ entries, predictions, goalWeight, preferences, summary }: SummaryPanelProps) => {
   const latestPrediction = predictions[6] ?? predictions[predictions.length - 1];
 
   if (!summary) {
@@ -27,11 +22,11 @@ export const SummaryPanel = ({ entries, predictions, goalWeight, summary }: Summ
   }
 
   const goalCopy = summary.projectedGoalDate
-    ? `At this pace you'll touch ${goalWeight} kg around ${format(summary.projectedGoalDate, 'MMM d')}.`
+    ? `At this pace you'll touch ${formatWeight(goalWeight, preferences.weightUnit)} around ${formatShortDate(summary.projectedGoalDate, preferences.dateFormat)}.`
     : 'Add a bit more history so we can forecast your goal date with confidence.';
 
   const nextWeekCopy = latestPrediction
-    ? `The model expects ${latestPrediction.mean.toFixed(1)} kg in about a week (±${Math.sqrt(latestPrediction.variance).toFixed(1)}).`
+    ? `The model expects ${convertWeight(latestPrediction.mean, preferences.weightUnit).toFixed(1)} ${preferences.weightUnit} in about a week (±${convertWeight(Math.sqrt(latestPrediction.variance), preferences.weightUnit).toFixed(1)}).`
     : 'Add a few more points to unlock next-week projections.';
 
   return (
@@ -40,19 +35,19 @@ export const SummaryPanel = ({ entries, predictions, goalWeight, summary }: Summ
         <div>
           <p className="label">Net change</p>
           <h3 className={summary.totalChange <= 0 ? 'positive' : 'neutral'}>
-            {formatChange(summary.totalChange)}
+            {formatWeightDelta(summary.totalChange, preferences.weightUnit)}
           </h3>
           <p className="muted">{summary.totalChange <= 0 ? 'Weight lost so far' : 'Weight gain so far'}</p>
         </div>
         <div>
           <p className="label">Weekly velocity</p>
-          <h3>{formatChange(summary.pacePerWeek)}</h3>
+          <h3>{formatWeightDelta(summary.pacePerWeek, preferences.weightUnit)}</h3>
           <p className="muted">avg change every 7 days</p>
         </div>
         <div>
           <p className="label">Last log</p>
-          <h3>{summary.latestWeight.toFixed(1)} kg</h3>
-          <p className="muted">{format(new Date(entries[entries.length - 1].timestamp), 'MMM d, HH:mm')}</p>
+          <h3>{formatWeight(summary.latestWeight, preferences.weightUnit)}</h3>
+          <p className="muted">{formatDateTime(new Date(entries[entries.length - 1].timestamp), preferences.dateFormat)}</p>
         </div>
       </div>
       <div className="summary-body">

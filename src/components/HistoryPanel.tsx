@@ -1,12 +1,13 @@
-import { format } from 'date-fns';
-import { WeightEntry } from '../types';
+import { DisplayPreferences, WeightEntry } from '../types';
 import { describeWorkout } from '../utils/gaussianProcess';
+import { formatDateTime, formatWeight } from '../utils/formatting';
 
 type HistoryPanelProps = {
   entries: WeightEntry[];
+  preferences: DisplayPreferences;
 };
 
-export const HistoryPanel = ({ entries }: HistoryPanelProps) => {
+export const HistoryPanel = ({ entries, preferences }: HistoryPanelProps) => {
   const ordered = [...entries].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
@@ -22,10 +23,10 @@ export const HistoryPanel = ({ entries }: HistoryPanelProps) => {
           {ordered.slice(0, 8).map((entry) => (
             <li key={entry.id}>
               <div>
-                <p className="label">{format(new Date(entry.timestamp), 'MMM d, HH:mm')}</p>
+                <p className="label">{formatDateTime(new Date(entry.timestamp), preferences.dateFormat)}</p>
                 <p className="muted">{describeWorkout(entry)}</p>
               </div>
-              <span className="weight">{entry.weight.toFixed(1)} kg</span>
+              <span className="weight">{formatWeight(entry.weight, preferences.weightUnit)}</span>
             </li>
           ))}
         </ul>

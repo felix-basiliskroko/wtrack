@@ -1,10 +1,11 @@
-import { format, formatDistanceStrict } from 'date-fns';
-import { MetabolicProfile, ProjectionSummary } from '../types';
+import { formatDistanceStrict } from 'date-fns';
+import { DisplayPreferences, ProjectionSummary } from '../types';
+import { convertWeight, formatShortDate } from '../utils/formatting';
 
-const formatEta = (date: Date | null) => {
+const formatEta = (date: Date | null, dateFormat: DisplayPreferences['dateFormat']) => {
   if (!date) return 'Need more data for a prediction.';
   const daysOut = formatDistanceStrict(new Date(), date, { unit: 'day' });
-  return `${format(date, 'MMM d')} (${daysOut} away)`;
+  return `${formatShortDate(date, dateFormat)} (${daysOut} away)`;
 };
 
 const classify = (weeklyLoss: number) => {
@@ -39,10 +40,10 @@ const classify = (weeklyLoss: number) => {
 type MomentumPanelProps = {
   summary: ProjectionSummary | null;
   goalWeight: number;
-  profile: MetabolicProfile;
+  preferences: DisplayPreferences;
 };
 
-export const MomentumPanel = ({ summary, goalWeight }: MomentumPanelProps) => {
+export const MomentumPanel = ({ summary, goalWeight, preferences }: MomentumPanelProps) => {
   if (!summary) {
     return (
       <section className="panel-card momentum-card">
@@ -54,12 +55,12 @@ export const MomentumPanel = ({ summary, goalWeight }: MomentumPanelProps) => {
 
   const weeklyLoss = -summary.pacePerWeek;
   const status = classify(weeklyLoss);
-  const eta = formatEta(summary.projectedGoalDate);
+  const eta = formatEta(summary.projectedGoalDate, preferences.dateFormat);
   const kgToGoal = summary.latestWeight - goalWeight;
   const suggestion =
     weeklyLoss >= 0.1
       ? `Projected goal in: ${eta}`
-      : `Need ${Math.max(kgToGoal, 0).toFixed(1)} kg drop to hit ${goalWeight} kg.`;
+      : `Need ${convertWeight(Math.max(kgToGoal, 0), preferences.weightUnit).toFixed(1)} ${preferences.weightUnit} drop to hit ${convertWeight(goalWeight, preferences.weightUnit).toFixed(1)} ${preferences.weightUnit}.`;
 
   return (
     <section className="panel-card momentum-card">
@@ -70,7 +71,9 @@ export const MomentumPanel = ({ summary, goalWeight }: MomentumPanelProps) => {
       <div className="momentum-body">
         <div>
           <p className="eyebrow">Weekly velocity</p>
-          <h3>{`${weeklyLoss >= 0 ? '-' : '+'}${Math.abs(weeklyLoss).toFixed(2)} kg/wk`}</h3>
+          <h3>
+            {`${weeklyLoss >= 0 ? '-' : '+'}${convertWeight(Math.abs(weeklyLoss), preferences.weightUnit).toFixed(2)} ${preferences.weightUnit}/wk`}
+          </h3>
         </div>
         <div>
           <p className="eyebrow">Goal ETA</p>

@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
+import { DisplayPreferences } from '../types';
+import { convertWeight, getWeightInputStep, parseWeightInput } from '../utils/formatting';
 
 export type EntryPayload = {
   weight: number;
@@ -13,13 +15,14 @@ export type EntryPayload = {
 
 type EntryPanelProps = {
   onAddEntry: (payload: EntryPayload) => void;
+  preferences: DisplayPreferences;
 };
 
 const roundToTenth = (value: number) => Math.round(value * 10) / 10;
 type WorkoutPayload = NonNullable<EntryPayload['workout']>;
 type ActivityType = WorkoutPayload['activityType'];
 
-export const EntryPanel = ({ onAddEntry }: EntryPanelProps) => {
+export const EntryPanel = ({ onAddEntry, preferences }: EntryPanelProps) => {
   const [todayWeight, setTodayWeight] = useState('');
   const [todayActivity, setTodayActivity] = useState<ActivityType>('cardio');
   const [todayDuration, setTodayDuration] = useState('45');
@@ -58,7 +61,8 @@ export const EntryPanel = ({ onAddEntry }: EntryPanelProps) => {
   const handleTodaySubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!todayWeight.trim()) return;
-    const weight = roundToTenth(parseFloat(todayWeight));
+    const parsedWeight = parseFloat(todayWeight);
+    const weight = roundToTenth(parseWeightInput(parsedWeight, preferences.weightUnit));
     if (Number.isNaN(weight)) return;
     const timestamp = new Date().toISOString();
     const workout = buildWorkout(todayActivity, todayDuration, todayHeartRate);
@@ -69,7 +73,8 @@ export const EntryPanel = ({ onAddEntry }: EntryPanelProps) => {
   const handlePastSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!pastWeight.trim() || !pastDate || !pastTime) return;
-    const weight = roundToTenth(parseFloat(pastWeight));
+    const parsedWeight = parseFloat(pastWeight);
+    const weight = roundToTenth(parseWeightInput(parsedWeight, preferences.weightUnit));
     if (Number.isNaN(weight)) return;
     const localTimestamp = new Date(`${pastDate}T${pastTime}`);
     const workout = buildWorkout(pastActivity, pastDuration, pastHeartRate);
@@ -89,12 +94,12 @@ export const EntryPanel = ({ onAddEntry }: EntryPanelProps) => {
         </div>
         <form className="entry-form" onSubmit={handleTodaySubmit}>
           <label>
-            Today's weight (kg)
+            {`Today's weight (${preferences.weightUnit})`}
             <input
               type="number"
-              step="0.1"
+              step={getWeightInputStep(preferences.weightUnit)}
               min="0"
-              placeholder="81.4"
+              placeholder={convertWeight(81.4, preferences.weightUnit).toFixed(1)}
               value={todayWeight}
               onChange={(event) => setTodayWeight(event.target.value)}
             />
@@ -149,12 +154,12 @@ export const EntryPanel = ({ onAddEntry }: EntryPanelProps) => {
             <input type="time" value={pastTime} onChange={(event) => setPastTime(event.target.value)} />
           </label>
           <label>
-            Weight (kg)
+            {`Weight (${preferences.weightUnit})`}
             <input
               type="number"
-              step="0.1"
+              step={getWeightInputStep(preferences.weightUnit)}
               min="0"
-              placeholder="82.3"
+              placeholder={convertWeight(82.3, preferences.weightUnit).toFixed(1)}
               value={pastWeight}
               onChange={(event) => setPastWeight(event.target.value)}
             />

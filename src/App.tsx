@@ -7,10 +7,18 @@ import { HistoryPanel } from './components/HistoryPanel';
 import { DataVault } from './components/DataVault';
 import { MetabolismPanel } from './components/MetabolismPanel';
 import { MomentumPanel } from './components/MomentumPanel';
+import { DisplaySettingsPanel } from './components/DisplaySettingsPanel';
 import { usePersistentState } from './hooks/usePersistentState';
-import { DEFAULT_GOAL_WEIGHT, DEFAULT_METABOLIC_PROFILE, SEED_ENTRIES, STORAGE_KEYS } from './constants';
+import {
+  DEFAULT_DISPLAY_PREFERENCES,
+  DEFAULT_GOAL_WEIGHT,
+  DEFAULT_METABOLIC_PROFILE,
+  SEED_ENTRIES,
+  STORAGE_KEYS,
+} from './constants';
 import { generatePredictions, summarizeProjection } from './utils/gaussianProcess';
-import { MetabolicProfile, WeightEntry } from './types';
+import { DisplayPreferences, MetabolicProfile, WeightEntry } from './types';
+import { convertWeight, formatShortDate, formatWeight } from './utils/formatting';
 
 type ViewId = 'dashboard' | 'log' | 'history' | 'goal' | 'settings';
 
@@ -43,6 +51,10 @@ function App() {
     DEFAULT_METABOLIC_PROFILE,
   );
   const [goalWeight, setGoalWeight] = usePersistentState<number>(STORAGE_KEYS.goal, DEFAULT_GOAL_WEIGHT);
+  const [preferences, setPreferences] = usePersistentState<DisplayPreferences>(
+    STORAGE_KEYS.display,
+    DEFAULT_DISPLAY_PREFERENCES,
+  );
   const [activeView, setActiveView] = useState<ViewId>('dashboard');
 
   const predictions = useMemo(() => generatePredictions(entries, profile), [entries, profile]);
@@ -52,9 +64,11 @@ function App() {
   );
   const latestEntry = entries.length ? entries[entries.length - 1] : undefined;
   const etaLabel = summary?.projectedGoalDate
-    ? summary.projectedGoalDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    ? formatShortDate(summary.projectedGoalDate, preferences.dateFormat)
     : 'Need more data';
-  const paceLabel = summary ? `${summary.pacePerWeek <= 0 ? '' : '+'}${summary.pacePerWeek.toFixed(1)} kg/wk` : '--';
+  const paceLabel = summary
+    ? `${summary.pacePerWeek <= 0 ? '' : '+'}${convertWeight(summary.pacePerWeek, preferences.weightUnit).toFixed(1)} ${preferences.weightUnit}/wk`
+    : '--';
 
   const handleAddEntry = (payload: EntryPayload) => {
     setEntries((prev) => {
@@ -71,15 +85,21 @@ function App() {
           <section className="view-stack">
             <section className="chart-panel">
               <div className="chart-frame">
-                <WeightChart entries={entries} predictions={predictions} goalWeight={goalWeight} />
+                <WeightChart
+                  entries={entries}
+                  predictions={predictions}
+                  goalWeight={goalWeight}
+                  preferences={preferences}
+                />
               </div>
               <SummaryPanel
                 summary={summary}
                 entries={entries}
                 predictions={predictions}
                 goalWeight={goalWeight}
+                preferences={preferences}
               />
-              <MomentumPanel summary={summary} goalWeight={goalWeight} profile={profile} />
+              <MomentumPanel summary={summary} goalWeight={goalWeight} preferences={preferences} />
             </section>
           </section>
         );
@@ -95,7 +115,7 @@ function App() {
                 Review history
               </button>
             </div>
-            <EntryPanel onAddEntry={handleAddEntry} />
+            <EntryPanel onAddEntry={handleAddEntry} preferences={preferences} />
           </section>
         );
       case 'history':
@@ -111,10 +131,15 @@ function App() {
               </button>
             </div>
             <div className="dual-grid">
-              <HistoryPanel entries={entries} />
+              <HistoryPanel entries={entries} preferences={preferences} />
               <section className="chart-panel compact-panel">
                 <div className="chart-frame compact-chart-frame">
-                  <WeightChart entries={entries} predictions={predictions} goalWeight={goalWeight} />
+                  <WeightChart
+                    entries={entries}
+                    predictions={predictions}
+                    goalWeight={goalWeight}
+                    preferences={preferences}
+                  />
                 </div>
               </section>
             </div>
@@ -130,10 +155,21 @@ function App() {
               </div>
             </div>
             <div className="dual-grid">
-              <GoalSetter goalWeight={goalWeight} latestEntry={latestEntry} onChange={setGoalWeight} />
-              <MomentumPanel summary={summary} goalWeight={goalWeight} profile={profile} />
+              <GoalSetter
+                goalWeight={goalWeight}
+                latestEntry={latestEntry}
+                preferences={preferences}
+                onChange={setGoalWeight}
+              />
+              <MomentumPanel summary={summary} goalWeight={goalWeight} preferences={preferences} />
             </div>
-            <SummaryPanel summary={summary} entries={entries} predictions={predictions} goalWeight={goalWeight} />
+            <SummaryPanel
+              summary={summary}
+              entries={entries}
+              predictions={predictions}
+              goalWeight={goalWeight}
+              preferences={preferences}
+            />
           </section>
         );
       case 'settings':
@@ -141,13 +177,19 @@ function App() {
           <section className="view-stack">
             <div className="view-intro">
               <div>
-                <p className="label">Model and data</p>
+                <p className="label">Preferences and data</p>
                 <h2>Settings</h2>
               </div>
             </div>
+            <DisplaySettingsPanel preferences={preferences} onChange={setPreferences} />
             <div className="dual-grid">
               <MetabolismPanel profile={profile} onChange={setProfile} />
-              <DataVault entries={entries} profile={profile} goalWeight={goalWeight} />
+              <DataVault
+                entries={entries}
+                profile={profile}
+                goalWeight={goalWeight}
+                preferences={preferences}
+              />
             </div>
           </section>
         );
@@ -155,7 +197,9 @@ function App() {
   };
 
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell theme-${preferences.theme} density-${preferences.density} nav-${preferences.navigationStyle} motion-${preferences.motion}`}
+    >
       <header className="topbar">
         <div className="brand-block">
           <p className="label">Personal tracker</p>
@@ -165,11 +209,11 @@ function App() {
           <div className="status-strip">
             <div className="status-tile">
               <span className="label">Current</span>
-              <strong>{latestEntry ? `${latestEntry.weight.toFixed(1)} kg` : '--'}</strong>
+              <strong>{latestEntry ? formatWeight(latestEntry.weight, preferences.weightUnit) : '--'}</strong>
             </div>
             <div className="status-tile">
               <span className="label">Goal</span>
-              <strong>{goalWeight.toFixed(1)} kg</strong>
+              <strong>{formatWeight(goalWeight, preferences.weightUnit)}</strong>
             </div>
             <div className="status-tile">
               <span className="label">ETA</span>

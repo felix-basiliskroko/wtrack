@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MetabolicProfile, WeightEntry } from '../types';
+import { DisplayPreferences, MetabolicProfile, WeightEntry } from '../types';
 
 const pretty = (data: unknown) => JSON.stringify(data, null, 2);
 
@@ -7,15 +7,17 @@ type DataVaultProps = {
   entries: WeightEntry[];
   profile: MetabolicProfile;
   goalWeight: number;
+  preferences: DisplayPreferences;
 };
 
-export const DataVault = ({ entries, profile, goalWeight }: DataVaultProps) => {
+export const DataVault = ({ entries, profile, goalWeight, preferences }: DataVaultProps) => {
   const [copied, setCopied] = useState(false);
 
   const payload = {
     entries,
     metabolicProfile: profile,
     goalWeight,
+    displayPreferences: preferences,
     lastUpdated: new Date().toISOString(),
   };
 

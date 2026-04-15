@@ -32,3 +32,23 @@ export type ProjectionSummary = {
   projectedGoalDate: Date | null;
   latestWeight: number;
 };
+
+export type ThemeMode = 'midnight' | 'paper' | 'sports-lab';
+export type DensityMode = 'compact' | 'comfortable' | 'spacious';
+export type ChartLineStyle = 'strong' | 'soft';
+export type NavigationStyle = 'compact' | 'large';
+export type MotionMode = 'full' | 'reduced' | 'off';
+export type WeightUnit = 'kg' | 'lb';
+export type DateFormatMode = 'month-day' | 'day-month' | 'iso';
+
+export type DisplayPreferences = {
+  theme: ThemeMode;
+  density: DensityMode;
+  chartLineStyle: ChartLineStyle;
+  showConfidenceBand: boolean;
+  showGoalLine: boolean;
+  navigationStyle: NavigationStyle;
+  motion: MotionMode;
+  weightUnit: WeightUnit;
+  dateFormat: DateFormatMode;
+};
