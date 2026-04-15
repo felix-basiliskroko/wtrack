@@ -428,6 +428,12 @@ main {
   accent-color: var(--accent);
 }
 
+.panel-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-start;
+}
+
 .entry-form button:disabled {
   opacity: 0.3;
   cursor: not-allowed;
@@ -641,6 +647,26 @@ main {
   background: rgba(255, 112, 112, 0.12);
   color: #ffb2b2;
   cursor: pointer;
+}
+
+.milestone-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.milestone-list li {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--tile-bg);
+}
+
+.milestone-list strong {
+  display: block;
+  margin-bottom: 4px;
 }
 
 .history-card .weight {

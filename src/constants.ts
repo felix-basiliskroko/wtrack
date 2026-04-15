@@ -24,6 +24,7 @@ export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = {
   theme: 'midnight',
   density: 'comfortable',
   chartLineStyle: 'strong',
+  chartView: 'trend',
   showConfidenceBand: true,
   showGoalLine: true,
   navigationStyle: 'compact',

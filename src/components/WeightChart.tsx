@@ -36,6 +36,15 @@ export const WeightChart = ({ entries, predictions, goalWeight, preferences }: W
     const actualData = timeline.map((point) =>
       point.type === 'actual' ? convertWeight(point.weight, preferences.weightUnit) : null,
     );
+    const trendData = timeline.map((point, index) => {
+      if (point.type !== 'actual') return null;
+      const actualWindow = timeline
+        .slice(Math.max(0, index - 2), index + 1)
+        .filter((candidate) => candidate.type === 'actual')
+        .map((candidate) => convertWeight(candidate.weight, preferences.weightUnit));
+      if (!actualWindow.length) return null;
+      return actualWindow.reduce((sum, value) => sum + value, 0) / actualWindow.length;
+    });
     const predictedData = timeline.map((point) =>
       point.type === 'prediction' ? convertWeight(point.weight, preferences.weightUnit) : null,
     );
@@ -76,30 +85,41 @@ export const WeightChart = ({ entries, predictions, goalWeight, preferences }: W
       );
     }
 
-    datasets.push(
-      {
-          label: 'Recorded',
-          data: actualData,
-          borderColor: '#9d7bff',
-          borderWidth: actualLineWidth,
-          pointRadius: actualPointRadius,
-          pointHoverRadius: actualPointRadius + 2,
-          pointBackgroundColor: '#14142b',
-          pointBorderColor: '#9d7bff',
-          tension: preferences.chartLineStyle === 'strong' ? 0.35 : 0.18,
-          spanGaps: true,
-        },
-        {
-          label: 'Prediction',
-          data: predictedData,
-          borderColor: '#38e2ff',
-          borderDash: predictionDash,
-          borderWidth: predictionLineWidth,
-          pointRadius: 0,
-          tension: preferences.chartLineStyle === 'strong' ? 0.35 : 0.18,
-          spanGaps: true,
-        },
-      );
+    datasets.push({
+      label: 'Recorded',
+      data: actualData,
+      borderColor: '#9d7bff',
+      borderWidth: actualLineWidth,
+      pointRadius: actualPointRadius,
+      pointHoverRadius: actualPointRadius + 2,
+      pointBackgroundColor: '#14142b',
+      pointBorderColor: '#9d7bff',
+      tension: preferences.chartLineStyle === 'strong' ? 0.35 : 0.18,
+      spanGaps: true,
+      hidden: preferences.chartView === 'trend',
+    });
+
+    datasets.push({
+        label: 'Trend',
+        data: trendData,
+        borderColor: '#ffb86c',
+        borderWidth: preferences.chartLineStyle === 'strong' ? 3 : 2.25,
+        pointRadius: 0,
+        tension: 0.3,
+        spanGaps: true,
+        hidden: preferences.chartView === 'raw',
+      });
+
+    datasets.push({
+      label: 'Prediction',
+      data: predictedData,
+      borderColor: '#38e2ff',
+      borderDash: predictionDash,
+      borderWidth: predictionLineWidth,
+      pointRadius: 0,
+      tension: preferences.chartLineStyle === 'strong' ? 0.35 : 0.18,
+      spanGaps: true,
+    });
 
     if (preferences.showGoalLine) {
       datasets.push({

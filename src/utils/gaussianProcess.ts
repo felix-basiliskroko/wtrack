@@ -179,3 +179,50 @@ export const summarizeWeek = (entries: WeightEntry[]) => {
     bestDrop: Math.min(...weekly.map((entry, index) => (index === 0 ? 0 : entry.weight - weekly[index - 1].weight))),
   };
 };
+
+export const summarizeMilestones = (entries: WeightEntry[], goalWeight: number) => {
+  const ordered = sortedEntries(entries);
+  if (!ordered.length) return [];
+
+  const first = ordered[0];
+  const lowest = ordered.reduce((best, entry) => (entry.weight < best.weight ? entry : best), ordered[0]);
+  const milestones: Array<{ id: string; title: string; detail: string }> = [];
+
+  if (ordered.length >= 5) {
+    milestones.push({
+      id: 'five-logs',
+      title: 'Five logs banked',
+      detail: `${ordered.length} total entries recorded so far.`,
+    });
+  }
+
+  const lossFromStart = first.weight - lowest.weight;
+  if (lossFromStart >= 2) {
+    milestones.push({
+      id: 'two-kg-down',
+      title: 'First 2 kg down',
+      detail: `${lossFromStart.toFixed(1)} kg down from your starting point.`,
+    });
+  }
+
+  const last30Cutoff = Date.now() - 30 * DAY_MS;
+  const last30 = ordered.filter((entry) => new Date(entry.timestamp).getTime() >= last30Cutoff);
+  if (last30.length && lowest.id === last30.reduce((best, entry) => (entry.weight < best.weight ? entry : best), last30[0]).id) {
+    milestones.push({
+      id: 'thirty-day-low',
+      title: '30-day low',
+      detail: `${lowest.weight.toFixed(1)} kg is your lowest reading in the last month.`,
+    });
+  }
+
+  const reachedGoal = ordered.find((entry) => entry.weight <= goalWeight);
+  if (reachedGoal) {
+    milestones.push({
+      id: 'goal-hit',
+      title: 'Goal reached',
+      detail: `First hit at ${reachedGoal.weight.toFixed(1)} kg.`,
+    });
+  }
+
+  return milestones;
+};

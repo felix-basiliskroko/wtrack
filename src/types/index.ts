@@ -43,6 +43,7 @@ export type ProjectionSummary = {
 export type ThemeMode = 'midnight' | 'paper' | 'sports-lab';
 export type DensityMode = 'compact' | 'comfortable' | 'spacious';
 export type ChartLineStyle = 'strong' | 'soft';
+export type ChartViewMode = 'raw' | 'trend' | 'combined';
 export type NavigationStyle = 'compact' | 'large';
 export type MotionMode = 'full' | 'reduced' | 'off';
 export type WeightUnit = 'kg' | 'lb';
@@ -52,6 +53,7 @@ export type DisplayPreferences = {
   theme: ThemeMode;
   density: DensityMode;
   chartLineStyle: ChartLineStyle;
+  chartView: ChartViewMode;
   showConfidenceBand: boolean;
   showGoalLine: boolean;
   navigationStyle: NavigationStyle;

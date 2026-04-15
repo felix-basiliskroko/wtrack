@@ -3,9 +3,10 @@ import { DisplayPreferences } from '../types';
 type DisplaySettingsPanelProps = {
   preferences: DisplayPreferences;
   onChange: (preferences: DisplayPreferences) => void;
+  onReset: () => void;
 };
 
-export const DisplaySettingsPanel = ({ preferences, onChange }: DisplaySettingsPanelProps) => {
+export const DisplaySettingsPanel = ({ preferences, onChange, onReset }: DisplaySettingsPanelProps) => {
   const update = <K extends keyof DisplayPreferences>(key: K, value: DisplayPreferences[K]) =>
     onChange({ ...preferences, [key]: value });
 
@@ -55,6 +56,20 @@ export const DisplaySettingsPanel = ({ preferences, onChange }: DisplaySettingsP
           >
             <option value="strong">Strong</option>
             <option value="soft">Soft</option>
+          </select>
+        </label>
+
+        <label className="slider-field">
+          <div className="slider-head">
+            <span>Chart view</span>
+          </div>
+          <select
+            value={preferences.chartView}
+            onChange={(event) => update('chartView', event.target.value as DisplayPreferences['chartView'])}
+          >
+            <option value="raw">Raw</option>
+            <option value="trend">Trend</option>
+            <option value="combined">Combined</option>
           </select>
         </label>
 
@@ -128,6 +143,12 @@ export const DisplaySettingsPanel = ({ preferences, onChange }: DisplaySettingsP
             onChange={(event) => update('showGoalLine', event.target.checked)}
           />
         </label>
+      </div>
+
+      <div className="panel-actions">
+        <button type="button" className="ghost-button" onClick={onReset}>
+          Reset display settings
+        </button>
       </div>
     </section>
   );

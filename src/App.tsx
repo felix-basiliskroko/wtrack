@@ -9,6 +9,7 @@ import { MetabolismPanel } from './components/MetabolismPanel';
 import { MomentumPanel } from './components/MomentumPanel';
 import { DisplaySettingsPanel } from './components/DisplaySettingsPanel';
 import { WeeklyReviewPanel } from './components/WeeklyReviewPanel';
+import { MilestonesPanel } from './components/MilestonesPanel';
 import { usePersistentState } from './hooks/usePersistentState';
 import {
   DEFAULT_DISPLAY_PREFERENCES,
@@ -54,9 +55,13 @@ function App() {
     DEFAULT_METABOLIC_PROFILE,
   );
   const [goalWeight, setGoalWeight] = usePersistentState<number>(STORAGE_KEYS.goal, DEFAULT_GOAL_WEIGHT);
-  const [preferences, setPreferences] = usePersistentState<DisplayPreferences>(
+  const [storedPreferences, setPreferences] = usePersistentState<DisplayPreferences>(
     STORAGE_KEYS.display,
     DEFAULT_DISPLAY_PREFERENCES,
+  );
+  const preferences = useMemo(
+    () => ({ ...DEFAULT_DISPLAY_PREFERENCES, ...storedPreferences }),
+    [storedPreferences],
   );
   const [activeView, setActiveView] = useState<ViewId>('dashboard');
 
@@ -97,6 +102,10 @@ function App() {
     setEntries((prev) => prev.filter((entry) => entry.id !== id));
   };
 
+  const handleResetDisplaySettings = () => {
+    setPreferences(DEFAULT_DISPLAY_PREFERENCES);
+  };
+
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
@@ -119,6 +128,7 @@ function App() {
                 preferences={preferences}
               />
               <MomentumPanel summary={summary} goalWeight={goalWeight} preferences={preferences} />
+              <MilestonesPanel entries={entries} goalWeight={goalWeight} preferences={preferences} />
             </section>
           </section>
         );
@@ -192,6 +202,7 @@ function App() {
               />
               <MomentumPanel summary={summary} goalWeight={goalWeight} preferences={preferences} />
             </div>
+            <MilestonesPanel entries={entries} goalWeight={goalWeight} preferences={preferences} />
           </section>
         );
       case 'goal':
@@ -230,7 +241,11 @@ function App() {
                 <h2>Settings</h2>
               </div>
             </div>
-            <DisplaySettingsPanel preferences={preferences} onChange={setPreferences} />
+            <DisplaySettingsPanel
+              preferences={preferences}
+              onChange={setPreferences}
+              onReset={handleResetDisplaySettings}
+            />
             <div className="dual-grid">
               <MetabolismPanel profile={profile} onChange={setProfile} />
               <DataVault
