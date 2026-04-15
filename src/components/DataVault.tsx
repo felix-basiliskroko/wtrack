@@ -1,15 +1,6 @@
 import { ChangeEvent, useRef, useState } from 'react';
-import { DisplayPreferences, MetabolicProfile, WeightEntry } from '../types';
-
-const pretty = (data: unknown) => JSON.stringify(data, null, 2);
-
-type BackupPayload = {
-  entries?: WeightEntry[];
-  metabolicProfile?: MetabolicProfile;
-  goalWeight?: number;
-  displayPreferences?: Partial<DisplayPreferences>;
-  lastUpdated?: string;
-};
+import { BackupPayload, BackupStatus, DisplayPreferences, MetabolicProfile, WeightEntry } from '../types';
+import { buildBackupPayload, prettyBackupPayload } from '../utils/backup';
 
 type DataVaultProps = {
   entries: WeightEntry[];
@@ -17,26 +8,34 @@ type DataVaultProps = {
   goalWeight: number;
   preferences: DisplayPreferences;
   onRestore: (payload: BackupPayload) => void;
+  backupStatus: BackupStatus;
+  backupDisabled: boolean;
+  backupPending: boolean;
+  onManualBackup: () => void;
 };
 
-export const DataVault = ({ entries, profile, goalWeight, preferences, onRestore }: DataVaultProps) => {
+export const DataVault = ({
+  entries,
+  profile,
+  goalWeight,
+  preferences,
+  onRestore,
+  backupStatus,
+  backupDisabled,
+  backupPending,
+  onManualBackup,
+}: DataVaultProps) => {
   const [copied, setCopied] = useState(false);
   const [importText, setImportText] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const payload = {
-    entries,
-    metabolicProfile: profile,
-    goalWeight,
-    displayPreferences: preferences,
-    lastUpdated: new Date().toISOString(),
-  };
+  const payload = buildBackupPayload(entries, profile, goalWeight, preferences, new Date().toISOString());
 
   const copy = async () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return;
     try {
-      await navigator.clipboard.writeText(pretty(payload));
+      await navigator.clipboard.writeText(prettyBackupPayload(payload));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
@@ -76,10 +75,24 @@ export const DataVault = ({ entries, profile, goalWeight, preferences, onRestore
       <div className="panel-head">
         <p className="eyebrow">Persistent JSON</p>
         <h3>Everything the model knows</h3>
-        <p className="muted">Stored in localStorage under wtrack.*, ready to export whenever you need.</p>
+        <p className="muted">
+          Stored in localStorage under `wtrack.*`, with optional server-side JSON backups when available.
+        </p>
         <button type="button" onClick={copy}>
           {copied ? 'Copied!' : 'Copy JSON'}
         </button>
+      </div>
+      <div className="data-vault-actions">
+        <button type="button" onClick={onManualBackup} disabled={backupDisabled || backupPending || !backupStatus.available}>
+          {backupPending ? 'Backing up...' : 'Backup'}
+        </button>
+        <p className="muted tiny">
+          {backupStatus.available
+            ? backupStatus.lastBackupAt
+              ? `Last backed up ${new Date(backupStatus.lastBackupAt).toLocaleString()}`
+              : 'No server backup yet'
+            : 'Server backup unavailable in this runtime'}
+        </p>
       </div>
       <div className="data-vault-import">
         <label>
@@ -104,7 +117,7 @@ export const DataVault = ({ entries, profile, goalWeight, preferences, onRestore
         </div>
         {status ? <p className="muted tiny">{status}</p> : null}
       </div>
-      <pre>{pretty(payload)}</pre>
+      <pre>{prettyBackupPayload(payload)}</pre>
     </section>
   );
 };

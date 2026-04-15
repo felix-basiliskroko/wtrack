@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { WeightChart } from './components/WeightChart';
 import { EntryPanel, EntryPayload } from './components/EntryPanel';
 import { SummaryPanel } from './components/SummaryPanel';
@@ -19,7 +19,8 @@ import {
   STORAGE_KEYS,
 } from './constants';
 import { generatePredictions, summarizeProjection } from './utils/gaussianProcess';
-import { DisplayPreferences, MetabolicProfile, WeightEntry } from './types';
+import { BackupPayload, BackupStatus, DisplayPreferences, MetabolicProfile, WeightEntry } from './types';
+import { buildBackupPayload, hashBackupPayload } from './utils/backup';
 import { convertWeight, formatShortDate, formatWeight } from './utils/formatting';
 
 type ViewId = 'dashboard' | 'log' | 'review' | 'history' | 'goal' | 'settings';
@@ -51,11 +52,12 @@ const createEntry = (payload: EntryPayload): WeightEntry => ({
   note: payload.note,
 });
 
-type BackupPayload = {
-  entries?: WeightEntry[];
-  metabolicProfile?: MetabolicProfile;
-  goalWeight?: number;
-  displayPreferences?: Partial<DisplayPreferences>;
+const EMPTY_BACKUP_STATUS: BackupStatus = {
+  available: false,
+  lastBackupAt: null,
+  latestHash: null,
+  latestFilename: null,
+  count: 0,
 };
 
 function App() {
@@ -73,8 +75,16 @@ function App() {
     () => ({ ...DEFAULT_DISPLAY_PREFERENCES, ...storedPreferences }),
     [storedPreferences],
   );
+  const backupPayload = useMemo(
+    () => buildBackupPayload(entries, profile, goalWeight, preferences),
+    [entries, profile, goalWeight, preferences],
+  );
   const [activeView, setActiveView] = useState<ViewId>('dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [backupStatus, setBackupStatus] = useState<BackupStatus>(EMPTY_BACKUP_STATUS);
+  const [backupPending, setBackupPending] = useState(false);
+  const [backupStatusLoaded, setBackupStatusLoaded] = useState(false);
+  const [currentBackupHash, setCurrentBackupHash] = useState<string | null>(null);
 
   const predictions = useMemo(() => generatePredictions(entries, profile), [entries, profile]);
   const summary = useMemo(
@@ -88,6 +98,8 @@ function App() {
   const paceLabel = summary
     ? `${summary.pacePerWeek <= 0 ? '' : '+'}${convertWeight(summary.pacePerWeek, preferences.weightUnit).toFixed(1)} ${preferences.weightUnit}/wk`
     : '--';
+  const backupDisabled =
+    !backupStatus.available || backupPending || !currentBackupHash || backupStatus.latestHash === currentBackupHash;
 
   const handleAddEntry = (payload: EntryPayload) => {
     setEntries((prev) => {
@@ -150,10 +162,72 @@ function App() {
     setMenuOpen(false);
   };
 
+  const refreshBackupStatus = async () => {
+    try {
+      const response = await fetch('/api/backups/status');
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      const nextStatus = (await response.json()) as BackupStatus;
+      setBackupStatus(nextStatus);
+    } catch (error) {
+      console.warn('Backup status unavailable', error);
+      setBackupStatus(EMPTY_BACKUP_STATUS);
+    } finally {
+      setBackupStatusLoaded(true);
+    }
+  };
+
+  const runBackup = async () => {
+    setBackupPending(true);
+    try {
+      const response = await fetch('/api/backups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(backupPayload),
+      });
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      const nextStatus = (await response.json()) as BackupStatus;
+      setBackupStatus(nextStatus);
+    } catch (error) {
+      console.warn('Backup failed', error);
+      await refreshBackupStatus();
+    } finally {
+      setBackupPending(false);
+    }
+  };
+
   const handleViewChange = (view: ViewId) => {
     setActiveView(view);
     setMenuOpen(false);
   };
+
+  useEffect(() => {
+    void refreshBackupStatus();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void hashBackupPayload(backupPayload).then((hash) => {
+      if (!cancelled) {
+        setCurrentBackupHash(hash);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [backupPayload]);
+
+  useEffect(() => {
+    if (!backupStatusLoaded || !backupStatus.available || !currentBackupHash) return;
+    if (backupStatus.latestHash === currentBackupHash) return;
+
+    const timeoutId = window.setTimeout(() => {
+      void runBackup();
+    }, 400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [backupPayload, backupStatus.available, backupStatus.latestHash, backupStatusLoaded, currentBackupHash]);
 
   const renderView = () => {
     switch (activeView) {
@@ -303,6 +377,10 @@ function App() {
                 goalWeight={goalWeight}
                 preferences={preferences}
                 onRestore={handleRestoreBackup}
+                backupStatus={backupStatus}
+                backupDisabled={backupDisabled}
+                backupPending={backupPending}
+                onManualBackup={() => void runBackup()}
               />
             </div>
           </section>

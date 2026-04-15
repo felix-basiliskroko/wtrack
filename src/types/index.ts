@@ -61,3 +61,19 @@ export type DisplayPreferences = {
   weightUnit: WeightUnit;
   dateFormat: DateFormatMode;
 };
+
+export type BackupPayload = {
+  entries: WeightEntry[];
+  metabolicProfile: MetabolicProfile;
+  goalWeight: number;
+  displayPreferences: DisplayPreferences;
+  lastUpdated: string;
+};
+
+export type BackupStatus = {
+  available: boolean;
+  lastBackupAt: string | null;
+  latestHash: string | null;
+  latestFilename: string | null;
+  count: number;
+};
