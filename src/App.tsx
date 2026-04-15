@@ -51,6 +51,13 @@ const createEntry = (payload: EntryPayload): WeightEntry => ({
   note: payload.note,
 });
 
+type BackupPayload = {
+  entries?: WeightEntry[];
+  metabolicProfile?: MetabolicProfile;
+  goalWeight?: number;
+  displayPreferences?: Partial<DisplayPreferences>;
+};
+
 function App() {
   const [entries, setEntries] = usePersistentState<WeightEntry[]>(STORAGE_KEYS.entries, SEED_ENTRIES);
   const [profile, setProfile] = usePersistentState<MetabolicProfile>(
@@ -109,6 +116,38 @@ function App() {
 
   const handleResetDisplaySettings = () => {
     setPreferences(DEFAULT_DISPLAY_PREFERENCES);
+  };
+
+  const handleRestoreBackup = (payload: BackupPayload) => {
+    const nextEntries = Array.isArray(payload.entries)
+      ? payload.entries
+          .filter((entry) => typeof entry?.timestamp === 'string' && Number.isFinite(entry?.weight))
+          .map((entry) => ({
+            ...entry,
+            id: entry.id || makeId(),
+          }))
+          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      : SEED_ENTRIES;
+
+    const nextProfile = payload.metabolicProfile
+      ? { ...DEFAULT_METABOLIC_PROFILE, ...payload.metabolicProfile }
+      : DEFAULT_METABOLIC_PROFILE;
+
+    const nextGoalWeight =
+      typeof payload.goalWeight === 'number' && Number.isFinite(payload.goalWeight)
+        ? payload.goalWeight
+        : DEFAULT_GOAL_WEIGHT;
+
+    const nextPreferences = payload.displayPreferences
+      ? { ...DEFAULT_DISPLAY_PREFERENCES, ...payload.displayPreferences }
+      : DEFAULT_DISPLAY_PREFERENCES;
+
+    setEntries(nextEntries);
+    setProfile(nextProfile);
+    setGoalWeight(nextGoalWeight);
+    setPreferences(nextPreferences);
+    setActiveView('dashboard');
+    setMenuOpen(false);
   };
 
   const handleViewChange = (view: ViewId) => {
@@ -263,6 +302,7 @@ function App() {
                 profile={profile}
                 goalWeight={goalWeight}
                 preferences={preferences}
+                onRestore={handleRestoreBackup}
               />
             </div>
           </section>
