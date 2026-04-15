@@ -56,6 +56,10 @@ export const MomentumPanel = ({ summary, goalWeight, preferences }: MomentumPane
   const weeklyLoss = -summary.pacePerWeek;
   const status = classify(weeklyLoss);
   const eta = formatEta(summary.projectedGoalDate, preferences.dateFormat);
+  const etaRange =
+    summary.goalDateRange.early && summary.goalDateRange.late
+      ? `${formatShortDate(summary.goalDateRange.early, preferences.dateFormat)} to ${formatShortDate(summary.goalDateRange.late, preferences.dateFormat)}`
+      : 'Need more signal for a tight range.';
   const kgToGoal = summary.latestWeight - goalWeight;
   const suggestion =
     weeklyLoss >= 0.1
@@ -78,6 +82,11 @@ export const MomentumPanel = ({ summary, goalWeight, preferences }: MomentumPane
         <div>
           <p className="eyebrow">Goal ETA</p>
           <p>{eta}</p>
+          <p className="muted tiny">{etaRange}</p>
+        </div>
+        <div>
+          <p className="eyebrow">Confidence</p>
+          <p>{summary.confidenceScore}%</p>
         </div>
       </div>
       <div className="momentum-footer">

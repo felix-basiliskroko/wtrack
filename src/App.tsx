@@ -8,6 +8,7 @@ import { DataVault } from './components/DataVault';
 import { MetabolismPanel } from './components/MetabolismPanel';
 import { MomentumPanel } from './components/MomentumPanel';
 import { DisplaySettingsPanel } from './components/DisplaySettingsPanel';
+import { WeeklyReviewPanel } from './components/WeeklyReviewPanel';
 import { usePersistentState } from './hooks/usePersistentState';
 import {
   DEFAULT_DISPLAY_PREFERENCES,
@@ -20,11 +21,12 @@ import { generatePredictions, summarizeProjection } from './utils/gaussianProces
 import { DisplayPreferences, MetabolicProfile, WeightEntry } from './types';
 import { convertWeight, formatShortDate, formatWeight } from './utils/formatting';
 
-type ViewId = 'dashboard' | 'log' | 'history' | 'goal' | 'settings';
+type ViewId = 'dashboard' | 'log' | 'review' | 'history' | 'goal' | 'settings';
 
 const views: Array<{ id: ViewId; label: string }> = [
   { id: 'dashboard', label: 'Home' },
-  { id: 'log', label: 'Log Entry' },
+  { id: 'log', label: 'Log' },
+  { id: 'review', label: 'Review' },
   { id: 'history', label: 'History' },
   { id: 'goal', label: 'Goal' },
   { id: 'settings', label: 'Settings' },
@@ -42,6 +44,7 @@ const createEntry = (payload: EntryPayload): WeightEntry => ({
   timestamp: payload.timestamp,
   weight: payload.weight,
   workout: payload.workout,
+  note: payload.note,
 });
 
 function App() {
@@ -76,6 +79,22 @@ function App() {
       return next.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     });
     setActiveView('dashboard');
+  };
+
+  const handleUpdateEntry = (id: string, payload: EntryPayload) => {
+    setEntries((prev) =>
+      prev
+        .map((entry) =>
+          entry.id === id
+            ? { ...entry, timestamp: payload.timestamp, weight: payload.weight, workout: payload.workout, note: payload.note }
+            : entry,
+        )
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
+    );
+  };
+
+  const handleDeleteEntry = (id: string) => {
+    setEntries((prev) => prev.filter((entry) => entry.id !== id));
   };
 
   const renderView = () => {
@@ -131,7 +150,12 @@ function App() {
               </button>
             </div>
             <div className="dual-grid">
-              <HistoryPanel entries={entries} preferences={preferences} />
+              <HistoryPanel
+                entries={entries}
+                preferences={preferences}
+                onDeleteEntry={handleDeleteEntry}
+                onUpdateEntry={handleUpdateEntry}
+              />
               <section className="chart-panel compact-panel">
                 <div className="chart-frame compact-chart-frame">
                   <WeightChart
@@ -142,6 +166,31 @@ function App() {
                   />
                 </div>
               </section>
+            </div>
+          </section>
+        );
+      case 'review':
+        return (
+          <section className="view-stack">
+            <div className="view-intro">
+              <div>
+                <p className="label">Check-in</p>
+                <h2>Weekly review</h2>
+              </div>
+              <button type="button" className="ghost-button" onClick={() => setActiveView('log')}>
+                Log another entry
+              </button>
+            </div>
+            <WeeklyReviewPanel entries={entries} preferences={preferences} summary={summary} />
+            <div className="dual-grid">
+              <SummaryPanel
+                summary={summary}
+                entries={entries}
+                predictions={predictions}
+                goalWeight={goalWeight}
+                preferences={preferences}
+              />
+              <MomentumPanel summary={summary} goalWeight={goalWeight} preferences={preferences} />
             </div>
           </section>
         );

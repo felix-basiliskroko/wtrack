@@ -6,6 +6,7 @@ import { convertWeight, getWeightInputStep, parseWeightInput } from '../utils/fo
 export type EntryPayload = {
   weight: number;
   timestamp: string;
+  note?: string;
   workout?: {
     activityType: 'cardio' | 'intervals' | 'strength';
     durationMin: number;
@@ -27,12 +28,14 @@ export const EntryPanel = ({ onAddEntry, preferences }: EntryPanelProps) => {
   const [todayActivity, setTodayActivity] = useState<ActivityType>('cardio');
   const [todayDuration, setTodayDuration] = useState('45');
   const [todayHeartRate, setTodayHeartRate] = useState('160');
+  const [todayNote, setTodayNote] = useState('');
   const [pastWeight, setPastWeight] = useState('');
   const [pastDate, setPastDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [pastTime, setPastTime] = useState('08:00');
   const [pastActivity, setPastActivity] = useState<ActivityType>('cardio');
   const [pastDuration, setPastDuration] = useState('45');
   const [pastHeartRate, setPastHeartRate] = useState('160');
+  const [pastNote, setPastNote] = useState('');
 
   const workoutComplete = (duration: string, heartRate: string) =>
     Boolean(duration.trim()) && Boolean(heartRate.trim());
@@ -66,8 +69,9 @@ export const EntryPanel = ({ onAddEntry, preferences }: EntryPanelProps) => {
     if (Number.isNaN(weight)) return;
     const timestamp = new Date().toISOString();
     const workout = buildWorkout(todayActivity, todayDuration, todayHeartRate);
-    onAddEntry({ weight, timestamp, workout });
+    onAddEntry({ weight, timestamp, workout, note: todayNote.trim() || undefined });
     setTodayWeight('');
+    setTodayNote('');
   };
 
   const handlePastSubmit = (event: React.FormEvent) => {
@@ -78,8 +82,9 @@ export const EntryPanel = ({ onAddEntry, preferences }: EntryPanelProps) => {
     if (Number.isNaN(weight)) return;
     const localTimestamp = new Date(`${pastDate}T${pastTime}`);
     const workout = buildWorkout(pastActivity, pastDuration, pastHeartRate);
-    onAddEntry({ weight, timestamp: localTimestamp.toISOString(), workout });
+    onAddEntry({ weight, timestamp: localTimestamp.toISOString(), workout, note: pastNote.trim() || undefined });
     setPastWeight('');
+    setPastNote('');
   };
 
   return (
@@ -130,6 +135,15 @@ export const EntryPanel = ({ onAddEntry, preferences }: EntryPanelProps) => {
               step="1"
               value={todayHeartRate}
               onChange={(event) => setTodayHeartRate(event.target.value)}
+            />
+          </label>
+          <label>
+            Note
+            <textarea
+              rows={3}
+              placeholder="Sleep, sodium, travel, stress, anything useful"
+              value={todayNote}
+              onChange={(event) => setTodayNote(event.target.value)}
             />
           </label>
           <button type="submit" disabled={isTodayDisabled}>
@@ -190,6 +204,15 @@ export const EntryPanel = ({ onAddEntry, preferences }: EntryPanelProps) => {
               step="1"
               value={pastHeartRate}
               onChange={(event) => setPastHeartRate(event.target.value)}
+            />
+          </label>
+          <label>
+            Note
+            <textarea
+              rows={3}
+              placeholder="Why this day matters"
+              value={pastNote}
+              onChange={(event) => setPastNote(event.target.value)}
             />
           </label>
           <button type="submit" disabled={isPastDisabled}>

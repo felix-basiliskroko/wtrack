@@ -24,6 +24,10 @@ export const SummaryPanel = ({ entries, predictions, goalWeight, preferences, su
   const goalCopy = summary.projectedGoalDate
     ? `At this pace you'll touch ${formatWeight(goalWeight, preferences.weightUnit)} around ${formatShortDate(summary.projectedGoalDate, preferences.dateFormat)}.`
     : 'Add a bit more history so we can forecast your goal date with confidence.';
+  const etaRangeCopy =
+    summary.goalDateRange.early && summary.goalDateRange.late
+      ? `${formatShortDate(summary.goalDateRange.early, preferences.dateFormat)} to ${formatShortDate(summary.goalDateRange.late, preferences.dateFormat)}`
+      : 'Range unlocks once the model has tighter variance.';
 
   const nextWeekCopy = latestPrediction
     ? `The model expects ${convertWeight(latestPrediction.mean, preferences.weightUnit).toFixed(1)} ${preferences.weightUnit} in about a week (±${convertWeight(Math.sqrt(latestPrediction.variance), preferences.weightUnit).toFixed(1)}).`
@@ -48,6 +52,11 @@ export const SummaryPanel = ({ entries, predictions, goalWeight, preferences, su
           <p className="label">Last log</p>
           <h3>{formatWeight(summary.latestWeight, preferences.weightUnit)}</h3>
           <p className="muted">{formatDateTime(new Date(entries[entries.length - 1].timestamp), preferences.dateFormat)}</p>
+        </div>
+        <div>
+          <p className="label">ETA confidence</p>
+          <h3>{summary.confidenceScore}%</h3>
+          <p className="muted">{etaRangeCopy}</p>
         </div>
       </div>
       <div className="summary-body">

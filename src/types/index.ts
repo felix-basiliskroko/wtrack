@@ -9,6 +9,7 @@ export type WeightEntry = {
   timestamp: string; // ISO
   weight: number; // kg
   workout?: WorkoutEntry;
+  note?: string;
 };
 
 export type MetabolicProfile = {
@@ -30,6 +31,12 @@ export type ProjectionSummary = {
   totalChange: number;
   pacePerWeek: number;
   projectedGoalDate: Date | null;
+  goalDateRange: {
+    early: Date | null;
+    likely: Date | null;
+    late: Date | null;
+  };
+  confidenceScore: number;
   latestWeight: number;
 };
 
