@@ -275,32 +275,32 @@ function App() {
       className={`app-shell theme-${preferences.theme} density-${preferences.density} nav-${preferences.navigationStyle} motion-${preferences.motion}`}
     >
       <header className="topbar">
-        <div className="brand-block">
-          <p className="label">Personal tracker</p>
-          <h1>WTrack</h1>
-        </div>
-        <div className="topbar-actions">
-          <div className="status-strip">
-            <div className="status-tile">
-              <span className="label">Current</span>
-              <strong>{latestEntry ? formatWeight(latestEntry.weight, preferences.weightUnit) : '--'}</strong>
-            </div>
-            <div className="status-tile">
-              <span className="label">Goal</span>
-              <strong>{formatWeight(goalWeight, preferences.weightUnit)}</strong>
-            </div>
-            <div className="status-tile">
-              <span className="label">ETA</span>
-              <strong>{etaLabel}</strong>
-            </div>
-            <div className="status-tile">
-              <span className="label">Pace</span>
-              <strong>{paceLabel}</strong>
-            </div>
+        <div className="topbar-main">
+          <div className="brand-block">
+            <p className="label">Personal tracker</p>
+            <h1>WTrack</h1>
           </div>
-          <button type="button" className="primary-button" onClick={() => handleViewChange('log')}>
+          <button type="button" className="primary-button topbar-log-button" onClick={() => handleViewChange('log')}>
             Log weight
           </button>
+        </div>
+        <div className="status-strip">
+          <div className="status-tile">
+            <span className="label">Current</span>
+            <strong>{latestEntry ? formatWeight(latestEntry.weight, preferences.weightUnit) : '--'}</strong>
+          </div>
+          <div className="status-tile">
+            <span className="label">Goal</span>
+            <strong>{formatWeight(goalWeight, preferences.weightUnit)}</strong>
+          </div>
+          <div className="status-tile">
+            <span className="label">ETA</span>
+            <strong>{etaLabel}</strong>
+          </div>
+          <div className="status-tile">
+            <span className="label">Pace</span>
+            <strong>{paceLabel}</strong>
+          </div>
         </div>
       </header>
 

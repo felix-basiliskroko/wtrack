@@ -154,9 +154,7 @@ main {
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: grid;
   gap: 20px;
   padding: 24px 28px;
   border-radius: 28px;
@@ -166,17 +164,20 @@ main {
   margin-bottom: 24px;
 }
 
+.topbar-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
 .brand-block h1 {
   font-size: clamp(2rem, 4vw, 3rem);
   letter-spacing: -0.04em;
 }
 
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+.topbar-log-button {
+  align-self: center;
 }
 
 .status-strip {
@@ -804,10 +805,13 @@ main {
     padding: 22px 20px;
   }
 
-  .topbar-actions,
   .view-intro {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .topbar-main {
+    align-items: center;
   }
 
   .status-strip {
@@ -857,5 +861,56 @@ main {
 
   .app-shell.theme-sports-lab .bottom-nav {
     background: rgba(8, 20, 27, 0.96);
+  }
+}
+
+@media (max-width: 600px) {
+  .app-shell {
+    padding-top: 16px;
+  }
+
+  .topbar {
+    margin-bottom: 14px;
+    gap: 14px;
+  }
+
+  main,
+  .view-stack {
+    gap: 14px;
+  }
+
+  .topbar-main {
+    align-items: flex-end;
+  }
+
+  .brand-block {
+    min-width: 0;
+  }
+
+  .brand-block h1 {
+    font-size: clamp(1.75rem, 8vw, 2.4rem);
+  }
+
+  .topbar-log-button {
+    padding: 12px 16px;
+    white-space: nowrap;
+  }
+
+  .status-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .status-tile {
+    padding: 12px 10px;
+  }
+
+  .status-tile strong {
+    font-size: 0.9rem;
+  }
+
+  .status-tile .label {
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
   }
 }
