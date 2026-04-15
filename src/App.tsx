@@ -24,11 +24,14 @@ import { convertWeight, formatShortDate, formatWeight } from './utils/formatting
 
 type ViewId = 'dashboard' | 'log' | 'review' | 'history' | 'goal' | 'settings';
 
-const views: Array<{ id: ViewId; label: string }> = [
+const primaryViews: Array<{ id: ViewId; label: string }> = [
   { id: 'dashboard', label: 'Home' },
   { id: 'log', label: 'Log' },
-  { id: 'review', label: 'Review' },
   { id: 'history', label: 'History' },
+];
+
+const secondaryViews: Array<{ id: ViewId; label: string }> = [
+  { id: 'review', label: 'Review' },
   { id: 'goal', label: 'Goal' },
   { id: 'settings', label: 'Settings' },
 ];
@@ -64,6 +67,7 @@ function App() {
     [storedPreferences],
   );
   const [activeView, setActiveView] = useState<ViewId>('dashboard');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const predictions = useMemo(() => generatePredictions(entries, profile), [entries, profile]);
   const summary = useMemo(
@@ -84,6 +88,7 @@ function App() {
       return next.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     });
     setActiveView('dashboard');
+    setMenuOpen(false);
   };
 
   const handleUpdateEntry = (id: string, payload: EntryPayload) => {
@@ -104,6 +109,11 @@ function App() {
 
   const handleResetDisplaySettings = () => {
     setPreferences(DEFAULT_DISPLAY_PREFERENCES);
+  };
+
+  const handleViewChange = (view: ViewId) => {
+    setActiveView(view);
+    setMenuOpen(false);
   };
 
   const renderView = () => {
@@ -140,7 +150,7 @@ function App() {
                 <p className="label">Daily workflow</p>
                 <h2>Log a new checkpoint</h2>
               </div>
-              <button type="button" className="ghost-button" onClick={() => setActiveView('history')}>
+              <button type="button" className="ghost-button" onClick={() => handleViewChange('history')}>
                 Review history
               </button>
             </div>
@@ -155,7 +165,7 @@ function App() {
                 <p className="label">Recorded data</p>
                 <h2>Weight timeline</h2>
               </div>
-              <button type="button" className="ghost-button" onClick={() => setActiveView('log')}>
+              <button type="button" className="ghost-button" onClick={() => handleViewChange('log')}>
                 Add entry
               </button>
             </div>
@@ -187,7 +197,7 @@ function App() {
                 <p className="label">Check-in</p>
                 <h2>Weekly review</h2>
               </div>
-              <button type="button" className="ghost-button" onClick={() => setActiveView('log')}>
+              <button type="button" className="ghost-button" onClick={() => handleViewChange('log')}>
                 Log another entry
               </button>
             </div>
@@ -288,7 +298,7 @@ function App() {
               <strong>{paceLabel}</strong>
             </div>
           </div>
-          <button type="button" className="primary-button" onClick={() => setActiveView('log')}>
+          <button type="button" className="primary-button" onClick={() => handleViewChange('log')}>
             Log weight
           </button>
         </div>
@@ -297,16 +307,46 @@ function App() {
       <div className="app-frame">
         <aside className="sidebar">
           <nav className="nav-stack" aria-label="Primary">
-            {views.map((view) => (
+            {primaryViews.map((view) => (
               <button
                 key={view.id}
                 type="button"
-                className={`nav-button ${activeView === view.id ? 'active' : ''}`}
-                onClick={() => setActiveView(view.id)}
+                className={`nav-button ${view.id === 'dashboard' ? 'nav-home-button' : ''} ${activeView === view.id ? 'active' : ''}`}
+                onClick={() => handleViewChange(view.id)}
               >
                 {view.label}
               </button>
             ))}
+            <div className={`more-nav ${menuOpen ? 'open' : ''}`}>
+              <button
+                type="button"
+                className={`nav-button nav-menu-button ${secondaryViews.some((view) => view.id === activeView) ? 'active' : ''}`}
+                onClick={() => setMenuOpen((current) => !current)}
+                aria-expanded={menuOpen}
+                aria-label="Open more navigation"
+              >
+                <span className="menu-icon" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                More
+              </button>
+              {menuOpen ? (
+                <div className="more-menu" role="menu">
+                  {secondaryViews.map((view) => (
+                    <button
+                      key={view.id}
+                      type="button"
+                      className={`more-menu-button ${activeView === view.id ? 'active' : ''}`}
+                      onClick={() => handleViewChange(view.id)}
+                    >
+                      {view.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </nav>
         </aside>
 
@@ -314,16 +354,46 @@ function App() {
       </div>
 
       <nav className="bottom-nav" aria-label="Mobile navigation">
-        {views.map((view) => (
+        {primaryViews.map((view) => (
           <button
             key={view.id}
             type="button"
-            className={`bottom-nav-button ${activeView === view.id ? 'active' : ''}`}
-            onClick={() => setActiveView(view.id)}
+            className={`bottom-nav-button ${view.id === 'dashboard' ? 'bottom-home-button' : ''} ${activeView === view.id ? 'active' : ''}`}
+            onClick={() => handleViewChange(view.id)}
           >
             {view.label}
           </button>
         ))}
+        <div className={`bottom-more ${menuOpen ? 'open' : ''}`}>
+          <button
+            type="button"
+            className={`bottom-nav-button bottom-menu-button ${secondaryViews.some((view) => view.id === activeView) ? 'active' : ''}`}
+            onClick={() => setMenuOpen((current) => !current)}
+            aria-expanded={menuOpen}
+            aria-label="Open more navigation"
+          >
+            <span className="menu-icon" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+            More
+          </button>
+          {menuOpen ? (
+            <div className="bottom-more-menu" role="menu">
+              {secondaryViews.map((view) => (
+                <button
+                  key={view.id}
+                  type="button"
+                  className={`more-menu-button ${activeView === view.id ? 'active' : ''}`}
+                  onClick={() => handleViewChange(view.id)}
+                >
+                  {view.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </nav>
     </div>
   );
