@@ -4,6 +4,8 @@ import {
   ProjectionSummary,
   WeightEntry,
   WorkoutEntry,
+  DailyHealthMetrics,
+  WorkoutSummary,
 } from '../types';
 
 const DAY_MS = 1000 * 60 * 60 * 24;
@@ -45,7 +47,30 @@ const calculateWorkoutCalories = (
   return Math.max(caloriesPerMinute * duration * factor, 0);
 };
 
-const averageWorkoutCalories = (entries: WeightEntry[], profile: MetabolicProfile) => {
+const averageWorkoutCalories = (
+  entries: WeightEntry[],
+  profile: MetabolicProfile,
+  importedMetrics: DailyHealthMetrics[] = [],
+  importedWorkouts: WorkoutSummary[] = [],
+) => {
+  const recentWorkoutCalories = importedWorkouts
+    .slice(-14)
+    .map((workout) => workout.activeEnergyKcal)
+    .filter((value): value is number => value !== undefined && value > 0);
+
+  if (recentWorkoutCalories.length) {
+    return recentWorkoutCalories.reduce((sum, value) => sum + value, 0) / recentWorkoutCalories.length;
+  }
+
+  const recentActiveCalories = importedMetrics
+    .slice(-14)
+    .map((metric) => (metric.exerciseMinutes ? metric.activeEnergyKcal : undefined))
+    .filter((value): value is number => value !== undefined && value > 0);
+
+  if (recentActiveCalories.length) {
+    return recentActiveCalories.reduce((sum, value) => sum + value, 0) / recentActiveCalories.length;
+  }
+
   const withWorkout = entries.filter((entry) => entry.workout);
   if (!withWorkout.length) return 220;
 
@@ -59,13 +84,20 @@ const averageWorkoutCalories = (entries: WeightEntry[], profile: MetabolicProfil
 export const generatePredictions = (
   entries: WeightEntry[],
   profile: MetabolicProfile,
+  importedMetrics: DailyHealthMetrics[] = [],
+  importedWorkouts: WorkoutSummary[] = [],
 ): PredictionPoint[] => {
   if (!entries.length) return [];
 
   const ordered = sortedEntries(entries);
   const last = ordered[ordered.length - 1];
   const startDate = new Date(last.timestamp).getTime();
-  const avgWorkoutCalories = averageWorkoutCalories(ordered.slice(-6), profile);
+  const avgWorkoutCalories = averageWorkoutCalories(
+    ordered.slice(-6),
+    profile,
+    importedMetrics,
+    importedWorkouts,
+  );
   const horizonDays = Math.max(profile.horizonDays, 7);
 
   let weight = last.weight;
@@ -134,6 +166,7 @@ export const summarizeProjection = (
 };
 
 export const describeWorkout = (entry: WeightEntry) => {
+  if (entry.source === 'appleHealth' && !entry.workout) return 'Apple Health weight';
   if (!entry.workout) return 'No workout logged';
   const { activityType, durationMin, peakHeartRate } = entry.workout;
   return `${activityType} · ${durationMin}min · ${peakHeartRate}bpm`;

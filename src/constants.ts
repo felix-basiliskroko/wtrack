@@ -4,6 +4,7 @@ export const STORAGE_KEYS = {
   entries: 'wtrack.entries.v2',
   profile: 'wtrack.metabolicProfile.v1',
   goal: 'wtrack.goalWeight.v1',
+  vaultMigration: 'wtrack.vaultMigration.v1',
 } as const;
 
 export const SEED_ENTRIES: WeightEntry[] = [];
