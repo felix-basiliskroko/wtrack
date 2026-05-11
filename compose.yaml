@@ -1,0 +1,31 @@
+services:
+  wtrack:
+    build:
+      context: .
+    image: wtrack:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WTRACK_HOST_PORT:-8787}:8787"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8787
+      WTRACK_DATA_DIR: /data
+      WTRACK_BACKUP_DIR: /backups
+      WTRACK_CONFIG_FILE: /config/wtrack.env
+    volumes:
+      - type: bind
+        source: ${HOME}/.local/share/wtrack/data
+        target: /data
+      - type: bind
+        source: ${HOME}/.local/share/wtrack/backups
+        target: /backups
+      - type: bind
+        source: ${HOME}/.config/wtrack
+        target: /config
+        read_only: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

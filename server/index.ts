@@ -42,6 +42,12 @@ type VaultObjectRow = {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const cwd = process.cwd();
+const configFile = process.env.WTRACK_CONFIG_FILE;
+
+if (configFile && existsSync(configFile)) {
+  process.loadEnvFile(configFile);
+}
+
 const dataDir = resolve(process.env.WTRACK_DATA_DIR ?? join(cwd, '.wtrack-data'));
 const dbPath = resolve(process.env.WTRACK_DB_PATH ?? join(dataDir, 'wtrack.sqlite'));
 const port = Number(process.env.PORT ?? process.env.WTRACK_PORT ?? 8787);
@@ -51,12 +57,12 @@ const isProduction = process.env.NODE_ENV === 'production';
 const devToken = 'wtrack-local-dev';
 const sessionTtlMs = 1000 * 60 * 60 * 24;
 const maxEncryptedObjectChars = 64 * 1024 * 1024;
-const backupDir = join(dataDir, 'backups');
+const backupDir = resolve(process.env.WTRACK_BACKUP_DIR ?? join(dataDir, 'backups'));
 const maxBackups = 5;
 
-if (!existsSync(dataDir)) {
-  mkdirSync(dataDir, { recursive: true });
-}
+mkdirSync(dataDir, { recursive: true });
+mkdirSync(dirname(dbPath), { recursive: true });
+mkdirSync(backupDir, { recursive: true });
 
 const db = new DatabaseSync(dbPath);
 db.exec(`
