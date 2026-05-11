@@ -1,4 +1,4 @@
-import { EncryptedVaultObject, VaultMeta } from '../types';
+import { BackupStatus, EncryptedVaultBackup, EncryptedVaultObject, VaultMeta } from '../types';
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
@@ -55,7 +55,15 @@ export const vaultApi = {
       body: JSON.stringify({ objects, expectedRevisions }),
     }),
 
-  exportEncryptedBackup: async () => {
+  getBackupStatus: () => requestJson<BackupStatus>('/api/backups/status'),
+
+  putEncryptedBackup: (backup: EncryptedVaultBackup) =>
+    requestJson<BackupStatus>('/api/backups', {
+      method: 'POST',
+      body: JSON.stringify(backup),
+    }),
+
+  exportEncryptedBackup: async (): Promise<EncryptedVaultBackup> => {
     const [meta, objects] = await Promise.all([vaultApi.getMeta(), vaultApi.getObjects()]);
     return {
       exportedAt: new Date().toISOString(),

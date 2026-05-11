@@ -1,14 +1,19 @@
-import { WeightEntry } from '../types';
+import { DisplayPreferences, WeightEntry } from '../types';
+import { convertWeight, getWeightInputBounds, getWeightInputStep, parseWeightInput } from '../utils/formatting';
 
 type GoalSetterProps = {
   goalWeight: number;
   latestEntry?: WeightEntry;
+  preferences: DisplayPreferences;
   onChange: (goal: number) => void;
 };
 
-export const GoalSetter = ({ goalWeight, latestEntry, onChange }: GoalSetterProps) => {
+export const GoalSetter = ({ goalWeight, latestEntry, preferences, onChange }: GoalSetterProps) => {
   const latestWeight = latestEntry?.weight ?? goalWeight;
   const delta = latestWeight - goalWeight;
+  const bounds = getWeightInputBounds(preferences.weightUnit);
+  const step = getWeightInputStep(preferences.weightUnit);
+  const displayGoal = convertWeight(goalWeight, preferences.weightUnit);
 
   return (
     <section className="panel-card goal-card">
@@ -20,35 +25,37 @@ export const GoalSetter = ({ goalWeight, latestEntry, onChange }: GoalSetterProp
       <div className="goal-body">
         <div className="goal-display">
           <span className="label">Goal</span>
-          <h2>{goalWeight.toFixed(1)} kg</h2>
+          <h2>{displayGoal.toFixed(1)} {preferences.weightUnit}</h2>
           <p className="muted">
-            {delta >= 0 ? `${delta.toFixed(1)} kg to go` : `${Math.abs(delta).toFixed(1)} kg past goal`}
+            {delta >= 0
+              ? `${convertWeight(delta, preferences.weightUnit).toFixed(1)} ${preferences.weightUnit} to go`
+              : `${convertWeight(Math.abs(delta), preferences.weightUnit).toFixed(1)} ${preferences.weightUnit} past goal`}
           </p>
         </div>
         <div className="goal-control">
           <input
             type="range"
-            min={50}
-            max={120}
-            step={0.5}
-            value={goalWeight}
+            min={bounds.min}
+            max={bounds.max}
+            step={step}
+            value={displayGoal}
             onChange={(event) => {
               const next = parseFloat(event.target.value);
               if (!Number.isNaN(next)) {
-                onChange(next);
+                onChange(parseWeightInput(next, preferences.weightUnit));
               }
             }}
           />
           <input
             type="number"
-            min={40}
-            max={150}
-            step={0.1}
-            value={goalWeight}
+            min={bounds.min}
+            max={bounds.max}
+            step={step}
+            value={displayGoal}
             onChange={(event) => {
               const next = parseFloat(event.target.value);
               if (!Number.isNaN(next)) {
-                onChange(next);
+                onChange(parseWeightInput(next, preferences.weightUnit));
               }
             }}
           />

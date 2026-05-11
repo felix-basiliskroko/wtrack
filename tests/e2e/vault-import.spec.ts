@@ -15,7 +15,7 @@ const sampleXml = `<?xml version="1.0" encoding="UTF-8"?>
   <Workout workoutActivityType="HKWorkoutActivityTypeRunning" sourceName="Felix Apple Watch" startDate="2026-05-01 09:00:00 +0200" endDate="2026-05-01 09:45:00 +0200" duration="45" durationUnit="min" totalEnergyBurned="500" totalEnergyBurnedUnit="Cal" totalDistance="7.2" totalDistanceUnit="km"/>
 </HealthData>`;
 
-test('sets up an encrypted vault and shows import controls', async ({ page }) => {
+test('persists manual data, display settings, and Apple Health imports in the encrypted vault', async ({ page }) => {
   const passphrase = 'playwright-passphrase';
 
   await page.goto('/');
@@ -34,6 +34,35 @@ test('sets up an encrypted vault and shows import controls', async ({ page }) =>
     await page.getByRole('button', { name: 'Unlock vault' }).click();
   }
 
+  await expect(page.getByRole('button', { name: 'Log weight' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Log weight' }).click();
+  await page.getByLabel("Today's weight (kg)").fill('84.5');
+  await page.getByLabel('Note').first().fill('Initial manual note');
+  await page.getByRole('button', { name: 'Drop it into the model' }).click();
+
+  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await expect(page.getByText('Initial manual note')).toBeVisible();
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByLabel('Note').fill('Edited manual note');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Edited manual note')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Open more navigation' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByLabel('Theme').selectOption('paper');
+  await expect(page.locator('.app-shell')).toHaveClass(/theme-paper/);
+  await page.getByRole('button', { name: 'Lock' }).click();
+  await page.getByLabel('Vault passphrase').fill(passphrase);
+  await page.getByRole('button', { name: 'Unlock vault' }).click();
+  await expect(page.locator('.app-shell')).toHaveClass(/theme-paper/);
+
+  await page.getByRole('button', { name: 'Open more navigation' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Server backup' }).click();
+  await expect(page.getByText(/Last encrypted server backup|No encrypted server backup yet/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Health', exact: true }).click();
   await expect(page.getByText('Apple Health import', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Keep detailed records')).toBeChecked();
   await expect(page.getByRole('button', { name: 'Choose Health export' })).toBeVisible();
@@ -57,4 +86,9 @@ test('sets up an encrypted vault and shows import controls', async ({ page }) =>
   await expect(page.getByText('Activity trends')).toBeVisible();
   await expect(page.getByText('Activity type breakdown')).toBeVisible();
   await expect(page.getByLabel('Min duration')).toBeVisible();
+
+  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await expect(page.getByText('Apple Health').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByText('Edited manual note')).toHaveCount(0);
 });

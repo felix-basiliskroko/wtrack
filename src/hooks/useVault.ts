@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { STORAGE_KEYS } from '../constants';
-import { HealthImportOptions, HealthSnapshot, MetabolicProfile, VaultData, VaultMeta, WeightEntry } from '../types';
+import { DEFAULT_DISPLAY_PREFERENCES, DEFAULT_GOAL_WEIGHT, DEFAULT_METABOLIC_PROFILE, SEED_ENTRIES, STORAGE_KEYS } from '../constants';
+import {
+  BackupPayload,
+  BackupStatus,
+  DisplayPreferences,
+  HealthImportOptions,
+  HealthSnapshot,
+  MetabolicProfile,
+  VaultData,
+  VaultMeta,
+  WeightEntry,
+} from '../types';
 import { createVaultMeta, rotateVaultMeta, unlockVaultKey } from '../services/vaultCrypto';
 import { parseHealthExportInWorker } from '../services/healthImportWorkerClient';
 import { vaultApi } from '../services/vaultApi';
@@ -20,6 +30,14 @@ type ImportProgress = {
   totalBytes?: number;
 };
 
+const EMPTY_BACKUP_STATUS: BackupStatus = {
+  available: false,
+  lastBackupAt: null,
+  latestHash: null,
+  latestFilename: null,
+  count: 0,
+};
+
 const makeId = () => {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();
@@ -30,11 +48,13 @@ const makeId = () => {
 const createEntry = (payload: {
   weight: number;
   timestamp: string;
+  note?: string;
   workout?: WeightEntry['workout'];
 }): WeightEntry => ({
   id: makeId(),
   timestamp: payload.timestamp,
   weight: payload.weight,
+  note: payload.note,
   workout: payload.workout,
   source: 'manual',
 });
@@ -45,6 +65,8 @@ export function useVault() {
   const [meta, setMeta] = useState<VaultMeta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
+  const [backupStatus, setBackupStatus] = useState<BackupStatus>(EMPTY_BACKUP_STATUS);
+  const [backupPending, setBackupPending] = useState(false);
   const [busy, setBusy] = useState(false);
   const vaultKeyRef = useRef<CryptoKey | null>(null);
   const revisionsRef = useRef<Record<string, number>>({});
@@ -71,6 +93,15 @@ export function useVault() {
     refreshMeta();
   }, [refreshMeta]);
 
+  const refreshBackupStatus = useCallback(async () => {
+    try {
+      const nextStatus = await vaultApi.getBackupStatus();
+      setBackupStatus(nextStatus);
+    } catch {
+      setBackupStatus(EMPTY_BACKUP_STATUS);
+    }
+  }, []);
+
   const login = useCallback(
     async (token: string) => {
       setBusy(true);
@@ -78,13 +109,14 @@ export function useVault() {
       try {
         await vaultApi.login(token);
         await refreshMeta();
+        await refreshBackupStatus();
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Login failed.');
       } finally {
         setBusy(false);
       }
     },
-    [refreshMeta],
+    [refreshBackupStatus, refreshMeta],
   );
 
   const persistData = useCallback(async (nextData: VaultData) => {
@@ -126,13 +158,14 @@ export function useVault() {
       setMeta(created.meta);
       setData(normalizeVaultData(initialData));
       setStatus('unlocked');
+      await refreshBackupStatus();
     } catch (caught) {
       vaultKeyRef.current = null;
       setError(caught instanceof Error ? caught.message : 'Vault setup failed.');
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [refreshBackupStatus]);
 
   const unlock = useCallback(
     async (passphrase: string) => {
@@ -153,6 +186,7 @@ export function useVault() {
         setMeta(currentMeta);
         setData(normalizeVaultData(decrypted));
         setStatus('unlocked');
+        await refreshBackupStatus();
       } catch (caught) {
         vaultKeyRef.current = null;
         setError(caught instanceof Error ? caught.message : 'Unlock failed. Check the passphrase.');
@@ -160,7 +194,7 @@ export function useVault() {
         setBusy(false);
       }
     },
-    [meta],
+    [meta, refreshBackupStatus],
   );
 
   const lock = useCallback(() => {
@@ -175,6 +209,7 @@ export function useVault() {
     revisionsRef.current = {};
     setData(null);
     setMeta(null);
+    setBackupStatus(EMPTY_BACKUP_STATUS);
     setStatus('unauthenticated');
   }, []);
 
@@ -192,6 +227,37 @@ export function useVault() {
       await updateData((current) => ({
         ...current,
         manualEntries: [...current.manualEntries, createEntry(payload)],
+      }));
+    },
+    [updateData],
+  );
+
+  const updateEntry = useCallback(
+    async (id: string, payload: Parameters<typeof createEntry>[0]) => {
+      await updateData((current) => ({
+        ...current,
+        manualEntries: current.manualEntries.map((entry) =>
+          entry.id === id && entry.source !== 'appleHealth'
+            ? {
+                ...entry,
+                timestamp: payload.timestamp,
+                weight: payload.weight,
+                workout: payload.workout,
+                note: payload.note,
+                source: 'manual',
+              }
+            : entry,
+        ),
+      }));
+    },
+    [updateData],
+  );
+
+  const deleteEntry = useCallback(
+    async (id: string) => {
+      await updateData((current) => ({
+        ...current,
+        manualEntries: current.manualEntries.filter((entry) => entry.id !== id || entry.source === 'appleHealth'),
       }));
     },
     [updateData],
@@ -234,6 +300,62 @@ export function useVault() {
           chartWeightSource,
           updatedAt: new Date().toISOString(),
         },
+      }));
+    },
+    [updateData],
+  );
+
+  const updatePreferences = useCallback(
+    async (displayPreferences: DisplayPreferences) => {
+      await updateData((current) => ({
+        ...current,
+        settings: {
+          ...current.settings,
+          displayPreferences: {
+            ...DEFAULT_DISPLAY_PREFERENCES,
+            ...displayPreferences,
+          },
+          updatedAt: new Date().toISOString(),
+        },
+      }));
+    },
+    [updateData],
+  );
+
+  const restoreBackup = useCallback(
+    async (payload: BackupPayload) => {
+      const nextEntries = Array.isArray(payload.entries)
+        ? payload.entries
+            .filter((entry) => typeof entry?.timestamp === 'string' && Number.isFinite(entry?.weight))
+            .map((entry) => ({
+              ...entry,
+              id: entry.id || makeId(),
+              source: 'manual' as const,
+            }))
+            .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        : SEED_ENTRIES;
+
+      const nextProfile = payload.metabolicProfile
+        ? { ...DEFAULT_METABOLIC_PROFILE, ...payload.metabolicProfile }
+        : DEFAULT_METABOLIC_PROFILE;
+      const nextGoalWeight =
+        typeof payload.goalWeight === 'number' && Number.isFinite(payload.goalWeight)
+          ? payload.goalWeight
+          : DEFAULT_GOAL_WEIGHT;
+      const nextPreferences = payload.displayPreferences
+        ? { ...DEFAULT_DISPLAY_PREFERENCES, ...payload.displayPreferences }
+        : DEFAULT_DISPLAY_PREFERENCES;
+
+      await updateData((current) => ({
+        ...current,
+        settings: {
+          ...current.settings,
+          metabolicProfile: nextProfile,
+          goalWeight: nextGoalWeight,
+          displayPreferences: nextPreferences,
+          updatedAt: new Date().toISOString(),
+        },
+        manualEntries: nextEntries,
       }));
     },
     [updateData],
@@ -286,6 +408,21 @@ export function useVault() {
 
   const exportEncryptedBackup = useCallback(async () => vaultApi.exportEncryptedBackup(), []);
 
+  const backupEncryptedVault = useCallback(async () => {
+    setBackupPending(true);
+    setError(null);
+    try {
+      const backup = await vaultApi.exportEncryptedBackup();
+      const nextStatus = await vaultApi.putEncryptedBackup(backup);
+      setBackupStatus(nextStatus);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Encrypted backup failed.');
+      await refreshBackupStatus();
+    } finally {
+      setBackupPending(false);
+    }
+  }, [refreshBackupStatus]);
+
   return useMemo(
     () => ({
       status,
@@ -293,19 +430,27 @@ export function useVault() {
       error,
       busy,
       importProgress,
+      backupStatus,
+      backupPending,
       login,
       setup,
       unlock,
       lock,
       logout,
       addEntry,
+      updateEntry,
+      deleteEntry,
       updateProfile,
       updateGoal,
       updateChartSource,
+      updatePreferences,
+      restoreBackup,
       importHealthExport,
       rotatePassphrase,
       exportEncryptedBackup,
+      backupEncryptedVault,
       refreshMeta,
+      refreshBackupStatus,
     }),
     [
       status,
@@ -313,19 +458,27 @@ export function useVault() {
       error,
       busy,
       importProgress,
+      backupStatus,
+      backupPending,
       login,
       setup,
       unlock,
       lock,
       logout,
       addEntry,
+      updateEntry,
+      deleteEntry,
       updateProfile,
       updateGoal,
       updateChartSource,
+      updatePreferences,
+      restoreBackup,
       importHealthExport,
       rotatePassphrase,
       exportEncryptedBackup,
+      backupEncryptedVault,
       refreshMeta,
+      refreshBackupStatus,
     ],
   );
 }

@@ -1,4 +1,4 @@
-import { DEFAULT_GOAL_WEIGHT, DEFAULT_METABOLIC_PROFILE, STORAGE_KEYS } from '../constants';
+import { DEFAULT_DISPLAY_PREFERENCES, DEFAULT_GOAL_WEIGHT, DEFAULT_METABOLIC_PROFILE, STORAGE_KEYS } from '../constants';
 import {
   EncryptedVaultObject,
   HealthSnapshot,
@@ -42,11 +42,16 @@ export function buildInitialVaultData(): VaultData {
   const migratedEntries = safeJson<WeightEntry[]>(STORAGE_KEYS.entries, []);
   const migratedProfile = safeJson<MetabolicProfile>(STORAGE_KEYS.profile, DEFAULT_METABOLIC_PROFILE);
   const migratedGoal = safeJson<number>(STORAGE_KEYS.goal, DEFAULT_GOAL_WEIGHT);
+  const migratedPreferences = safeJson(STORAGE_KEYS.display, DEFAULT_DISPLAY_PREFERENCES);
 
   return {
     settings: {
       metabolicProfile: migratedProfile,
       goalWeight: migratedGoal,
+      displayPreferences: {
+        ...DEFAULT_DISPLAY_PREFERENCES,
+        ...migratedPreferences,
+      },
       chartWeightSource: 'combined',
       createdAt: now,
       updatedAt: now,
@@ -86,13 +91,13 @@ export async function decryptVaultData(vaultKey: CryptoKey, objects: EncryptedVa
   }
 
   const [settings, manualEntries, health] = await Promise.all([
-    decryptVaultObject<VaultSettings>(vaultKey, settingsObject),
+    decryptVaultObject<Partial<VaultSettings>>(vaultKey, settingsObject),
     decryptVaultObject<WeightEntry[]>(vaultKey, manualEntriesObject),
     decryptVaultObject<HealthSnapshot>(vaultKey, healthObject),
   ]);
 
   return {
-    settings,
+    settings: normalizeVaultSettings(settings),
     manualEntries,
     health: {
       ...emptyHealthSnapshot(),
@@ -138,13 +143,13 @@ export async function encryptVaultData(
 
 export function normalizeVaultData(data: VaultData): VaultData {
   return {
-    settings: {
-      ...data.settings,
-      updatedAt: new Date().toISOString(),
-    },
-    manualEntries: [...data.manualEntries].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-    ),
+    settings: normalizeVaultSettings(data.settings),
+    manualEntries: [...data.manualEntries]
+      .map((entry) => ({
+        ...entry,
+        source: entry.source ?? 'manual',
+      }))
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
     health: {
       dailyMetrics: [...data.health.dailyMetrics].sort((a, b) => a.date.localeCompare(b.date)),
       weightMeasurements: [...data.health.weightMeasurements].sort(
@@ -164,5 +169,26 @@ export function normalizeVaultData(data: VaultData): VaultData {
         (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime(),
       ),
     },
+  };
+}
+
+function normalizeVaultSettings(settings: Partial<VaultSettings>): VaultSettings {
+  const now = new Date().toISOString();
+  return {
+    metabolicProfile: {
+      ...DEFAULT_METABOLIC_PROFILE,
+      ...settings.metabolicProfile,
+    },
+    goalWeight:
+      typeof settings.goalWeight === 'number' && Number.isFinite(settings.goalWeight)
+        ? settings.goalWeight
+        : DEFAULT_GOAL_WEIGHT,
+    displayPreferences: {
+      ...DEFAULT_DISPLAY_PREFERENCES,
+      ...settings.displayPreferences,
+    },
+    chartWeightSource: settings.chartWeightSource ?? 'combined',
+    createdAt: settings.createdAt ?? now,
+    updatedAt: now,
   };
 }

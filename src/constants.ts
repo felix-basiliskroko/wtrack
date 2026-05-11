@@ -1,9 +1,10 @@
-import { MetabolicProfile, WeightEntry } from './types';
+import { DisplayPreferences, MetabolicProfile, WeightEntry } from './types';
 
 export const STORAGE_KEYS = {
   entries: 'wtrack.entries.v2',
   profile: 'wtrack.metabolicProfile.v1',
   goal: 'wtrack.goalWeight.v1',
+  display: 'wtrack.display.v1',
   vaultMigration: 'wtrack.vaultMigration.v1',
 } as const;
 
@@ -19,3 +20,16 @@ export const DEFAULT_METABOLIC_PROFILE: MetabolicProfile = {
 };
 
 export const DEFAULT_GOAL_WEIGHT = 80;
+
+export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = {
+  theme: 'midnight',
+  density: 'comfortable',
+  chartLineStyle: 'strong',
+  chartView: 'trend',
+  showConfidenceBand: true,
+  showGoalLine: true,
+  navigationStyle: 'compact',
+  motion: 'full',
+  weightUnit: 'kg',
+  dateFormat: 'month-day',
+};

@@ -1,8 +1,8 @@
 import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import Fastify, { FastifyReply, FastifyRequest } from 'fastify';
-import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync } from 'node:fs';
+import { createHash, randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, promises as fs } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
@@ -22,6 +22,12 @@ type EncryptedVaultObject = {
   ciphertext: string;
   aad: string;
   updatedAt?: string;
+};
+
+type EncryptedVaultBackup = {
+  exportedAt: string;
+  meta: VaultMetaRecord | null;
+  objects: EncryptedVaultObject[];
 };
 
 type VaultObjectRow = {
@@ -45,6 +51,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 const devToken = 'wtrack-local-dev';
 const sessionTtlMs = 1000 * 60 * 60 * 24;
 const maxEncryptedObjectChars = 64 * 1024 * 1024;
+const backupDir = join(dataDir, 'backups');
+const maxBackups = 5;
 
 if (!existsSync(dataDir)) {
   mkdirSync(dataDir, { recursive: true });
@@ -148,7 +156,7 @@ function getSession(id: string | undefined) {
 async function requireSession(request: FastifyRequest, reply: FastifyReply) {
   const session = getSession(request.cookies[sessionCookieName]);
   if (!session) {
-    reply.code(401).send({ error: 'unauthorized' });
+    return reply.code(401).send({ error: 'unauthorized' });
   }
 }
 
@@ -174,6 +182,68 @@ function validateObject(object: Partial<EncryptedVaultObject>): asserts object i
       throw new Error(`Invalid vault object ${field}`);
     }
   }
+}
+
+const backupHash = (backup: EncryptedVaultBackup) =>
+  createHash('sha256').update(JSON.stringify({ meta: backup.meta, objects: backup.objects })).digest('hex');
+
+const backupTimestamp = () => new Date().toISOString().replace(/[:.]/g, '-');
+
+async function listBackups() {
+  await fs.mkdir(backupDir, { recursive: true });
+  const names = (await fs.readdir(backupDir)).filter((name) => name.endsWith('.json'));
+  const entries = await Promise.all(
+    names.map(async (name) => {
+      const filePath = join(backupDir, name);
+      const stat = await fs.stat(filePath);
+      return { name, filePath, stat };
+    }),
+  );
+  return entries.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
+}
+
+async function readBackupStatus() {
+  const backups = await listBackups();
+  if (!backups.length) {
+    return {
+      available: true,
+      lastBackupAt: null,
+      latestHash: null,
+      latestFilename: null,
+      count: 0,
+    };
+  }
+
+  const latest = backups[0];
+  const parsed = JSON.parse(await fs.readFile(latest.filePath, 'utf8')) as EncryptedVaultBackup;
+  return {
+    available: true,
+    lastBackupAt: parsed.exportedAt ?? latest.stat.mtime.toISOString(),
+    latestHash: backupHash(parsed),
+    latestFilename: latest.name,
+    count: backups.length,
+  };
+}
+
+function validateBackup(body: Partial<EncryptedVaultBackup> | null): asserts body is EncryptedVaultBackup {
+  if (!body || typeof body.exportedAt !== 'string' || !body.meta || !Array.isArray(body.objects)) {
+    throw new Error('invalid-encrypted-backup');
+  }
+  body.objects.forEach(validateObject);
+}
+
+async function writeEncryptedBackup(backup: EncryptedVaultBackup) {
+  const currentStatus = await readBackupStatus();
+  const nextHash = backupHash(backup);
+  if (currentStatus.latestHash === nextHash) return currentStatus;
+
+  await fs.mkdir(backupDir, { recursive: true });
+  const filename = `wtrack-encrypted-backup-${backupTimestamp()}.json`;
+  await fs.writeFile(join(backupDir, filename), JSON.stringify(backup, null, 2), 'utf8');
+
+  const backups = await listBackups();
+  await Promise.all(backups.slice(maxBackups).map((backupFile) => fs.unlink(backupFile.filePath)));
+  return readBackupStatus();
 }
 
 app.get('/api/healthz', async () => ({
@@ -344,6 +414,18 @@ app.put('/api/vault/objects', { preHandler: requireSession }, async (request, re
   } catch (error) {
     db.exec('ROLLBACK');
     reply.code(500).send({ error: error instanceof Error ? error.message : 'vault-write-failed' });
+  }
+});
+
+app.get('/api/backups/status', { preHandler: requireSession }, async () => readBackupStatus());
+
+app.post('/api/backups', { preHandler: requireSession }, async (request, reply) => {
+  try {
+    const body = request.body as Partial<EncryptedVaultBackup> | null;
+    validateBackup(body);
+    reply.send(await writeEncryptedBackup(body));
+  } catch (error) {
+    reply.code(400).send({ error: error instanceof Error ? error.message : 'invalid-encrypted-backup' });
   }
 });
 

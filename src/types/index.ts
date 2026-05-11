@@ -9,6 +9,7 @@ export type WeightEntry = {
   timestamp: string; // ISO
   weight: number; // kg
   workout?: WorkoutEntry;
+  note?: string;
   source?: 'manual' | 'appleHealth';
 };
 
@@ -31,10 +32,54 @@ export type ProjectionSummary = {
   totalChange: number;
   pacePerWeek: number;
   projectedGoalDate: Date | null;
+  goalDateRange: {
+    early: Date | null;
+    likely: Date | null;
+    late: Date | null;
+  };
+  confidenceScore: number;
   latestWeight: number;
 };
 
 export type ChartWeightSource = 'combined' | 'manual' | 'appleHealth';
+
+export type ThemeMode = 'midnight' | 'paper' | 'sports-lab';
+export type DensityMode = 'compact' | 'comfortable' | 'spacious';
+export type ChartLineStyle = 'strong' | 'soft';
+export type ChartViewMode = 'raw' | 'trend' | 'combined';
+export type NavigationStyle = 'compact' | 'large';
+export type MotionMode = 'full' | 'reduced' | 'off';
+export type WeightUnit = 'kg' | 'lb';
+export type DateFormatMode = 'month-day' | 'day-month' | 'iso';
+
+export type DisplayPreferences = {
+  theme: ThemeMode;
+  density: DensityMode;
+  chartLineStyle: ChartLineStyle;
+  chartView: ChartViewMode;
+  showConfidenceBand: boolean;
+  showGoalLine: boolean;
+  navigationStyle: NavigationStyle;
+  motion: MotionMode;
+  weightUnit: WeightUnit;
+  dateFormat: DateFormatMode;
+};
+
+export type BackupPayload = {
+  entries: WeightEntry[];
+  metabolicProfile: MetabolicProfile;
+  goalWeight: number;
+  displayPreferences: DisplayPreferences;
+  lastUpdated: string;
+};
+
+export type BackupStatus = {
+  available: boolean;
+  lastBackupAt: string | null;
+  latestHash: string | null;
+  latestFilename: string | null;
+  count: number;
+};
 
 export type DailyHealthMetrics = {
   date: string; // yyyy-MM-dd
@@ -144,6 +189,7 @@ export type HealthSnapshot = {
 export type VaultSettings = {
   metabolicProfile: MetabolicProfile;
   goalWeight: number;
+  displayPreferences: DisplayPreferences;
   chartWeightSource: ChartWeightSource;
   createdAt: string;
   updatedAt: string;
@@ -191,4 +237,10 @@ export type VaultMeta = {
     ciphertext: string;
   };
   updatedAt?: string;
+};
+
+export type EncryptedVaultBackup = {
+  exportedAt: string;
+  meta: VaultMeta | null;
+  objects: EncryptedVaultObject[];
 };

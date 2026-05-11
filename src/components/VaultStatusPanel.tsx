@@ -1,23 +1,30 @@
 import { useState } from 'react';
-import { HealthSnapshot } from '../types';
+import { BackupStatus, HealthSnapshot } from '../types';
 
 type VaultStatusPanelProps = {
   health: HealthSnapshot;
+  backupStatus: BackupStatus;
+  backupPending: boolean;
   onLock: () => void;
   onLogout: () => void;
   onRotatePassphrase: (passphrase: string) => void;
   onExportEncryptedBackup: () => Promise<unknown>;
+  onManualBackup: () => Promise<void>;
 };
 
 export const VaultStatusPanel = ({
   health,
+  backupStatus,
+  backupPending,
   onLock,
   onLogout,
   onRotatePassphrase,
   onExportEncryptedBackup,
+  onManualBackup,
 }: VaultStatusPanelProps) => {
   const [newPassphrase, setNewPassphrase] = useState('');
   const [backupReady, setBackupReady] = useState(false);
+  const [serverBackupReady, setServerBackupReady] = useState(false);
 
   const exportBackup = async () => {
     const backup = await onExportEncryptedBackup();
@@ -30,6 +37,12 @@ export const VaultStatusPanel = ({
     URL.revokeObjectURL(url);
     setBackupReady(true);
     setTimeout(() => setBackupReady(false), 2000);
+  };
+
+  const backupToServer = async () => {
+    await onManualBackup();
+    setServerBackupReady(true);
+    setTimeout(() => setServerBackupReady(false), 2000);
   };
 
   return (
@@ -60,10 +73,20 @@ export const VaultStatusPanel = ({
         <button type="button" onClick={exportBackup}>
           {backupReady ? 'Exported' : 'Encrypted backup'}
         </button>
+        <button type="button" onClick={backupToServer} disabled={backupPending}>
+          {backupPending ? 'Backing up...' : serverBackupReady ? 'Backed up' : 'Server backup'}
+        </button>
         <button type="button" onClick={onLogout}>
           Logout
         </button>
       </div>
+      <p className="muted tiny">
+        {backupStatus.available
+          ? backupStatus.lastBackupAt
+            ? `Last encrypted server backup ${new Date(backupStatus.lastBackupAt).toLocaleString()}`
+            : 'No encrypted server backup yet'
+          : 'Encrypted server backup unavailable in this runtime'}
+      </p>
       <form
         className="passphrase-form"
         onSubmit={(event) => {
